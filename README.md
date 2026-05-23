@@ -2,6 +2,22 @@
 
 专为潮玩博主设计的通用穿搭图生成工具，支持文生图和图生图模式，采用反向规范控制（只说明禁止事项，不指定明确风格）。
 
+## 🚀 一键在线安装（推荐！）
+
+使用 curl 一键安装：
+
+```bash
+bash -c "$(curl -fsSL https://raw.githubusercontent.com/78design/toy-outfit-generator/main/install-online.sh)"
+```
+
+或者使用 wget：
+
+```bash
+bash -c "$(wget -O- https://raw.githubusercontent.com/78design/toy-outfit-generator/main/install-online.sh)"
+```
+
+---
+
 ## 核心特点
 
 - **通用设计**：适用于各类潮玩产品（毛绒挂件、手办、盲盒、零钱包等）
@@ -11,7 +27,7 @@
 
 ## 快速开始
 
-### 1. 安装依赖
+### 1. 安装依赖（如果不使用一键安装）
 
 ```bash
 pip install -r requirements.txt
