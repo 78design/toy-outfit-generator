@@ -48,7 +48,7 @@ def extract_image_url_from_markdown(content):
 # 保持兼容性别名
 download_image = download_image_from_url
 
-def build_prompt(product_name, product_desc="", style=None, color=None, scene=None):
+def build_prompt(product_name, product_desc=""):
     
     negative_prompts = [
         "年龄小于18岁", "未成年感",
@@ -296,7 +296,7 @@ def main():
                     ref_images.append(tmp_path)
     
     print("构建穿搭提示词...")
-    prompt = build_prompt(args.product, args.desc, args.style, args.color, args.scene)
+    prompt = build_prompt(args.product, args.desc)
     
     print("生成图片...")
     result = generate_image(
