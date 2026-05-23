@@ -7,7 +7,6 @@
 import argparse
 import base64
 import os
-import random
 import re
 import sys
 import tempfile
@@ -19,69 +18,6 @@ except ImportError:
     print("Error: requests library not installed.")
     print("Run: pip install requests")
     sys.exit(1)
-
-STYLES = {
-    "streetwear": "街头潮流风格，oversize版型，个性配饰",
-    "techwear": "机能风，科技面料，多口袋设计",
-    "urban": "都市休闲风格，简约时尚，质感面料",
-    "avant-garde": "先锋前卫风格，独特剪裁，艺术感设计",
-    "casual": "休闲时尚风格，舒适自在，日常穿搭",
-    "vintage": "复古风格，经典元素，怀旧氛围",
-}
-
-COLORS = {
-    "black": "纯黑色调，神秘酷感",
-    "white": "纯白色调，干净简约",
-    "gray": "灰色系，高级感",
-    "navy": "深蓝色，沉稳大气",
-    "olive": "橄榄绿，复古质感",
-    "cream": "奶油色，温柔优雅",
-    "beige": "米色，自然舒适",
-    "burgundy": "酒红色，复古优雅",
-    "forest": "森林绿，自然清新",
-    "charcoal": "炭灰色，沉稳内敛",
-}
-
-SCENES = {
-    "urban_street": "城市街头，现代建筑背景",
-    "cafe": "潮流咖啡馆，工业风装修",
-    "rooftop": "城市天台，日落时分",
-    "studio": "简约摄影棚，干净背景",
-    "gallery": "艺术画廊，现代展览空间",
-    "street_art": "街头艺术墙，涂鸦背景",
-}
-
-POSES = [
-    "自然站立，身体微微侧转，一只手插在口袋",
-    "倚靠在墙边，姿态放松自然",
-    "行走中抓拍，动态感十足",
-    "坐在台阶上，腿部自然交叉",
-    "随意靠在栏杆上，眼神看向镜头",
-    "微微侧身，一只手轻轻撩动头发",
-    "双手交叉抱胸，自信姿态",
-    "手持咖啡杯，悠闲自在",
-]
-
-EXPRESSIONS = [
-    "自然微笑，眼神自信",
-    "中性表情，酷感十足",
-    "略带微笑，亲和力强",
-    "专注表情，眼神坚定",
-    "慵懒表情，随性自然",
-]
-
-ACCESSORIES = [
-    "银色项链",
-    "黑色棒球帽",
-    "金属手链",
-    "皮质斜挎包",
-    "复古墨镜",
-    "针织帽",
-    "银色耳环",
-    "帆布托特包",
-    "细带手表",
-    "珍珠项链",
-]
 
 def encode_image_to_base64(image_path):
     with open(image_path, "rb") as f:
@@ -113,65 +49,104 @@ def extract_image_url_from_markdown(content):
 download_image = download_image_from_url
 
 def build_prompt(product_name, product_desc="", style=None, color=None, scene=None):
-    style_desc = STYLES.get(style, STYLES["streetwear"]) if style else random.choice(list(STYLES.values()))
-    if color:
-        color_desc = COLORS.get(color, COLORS["black"])
-    else:
-        random_color_key = random.choice(list(COLORS.keys()))
-        color_desc = COLORS[random_color_key]
-    scene_desc = SCENES.get(scene, SCENES["urban_street"]) if scene else random.choice(list(SCENES.values()))
-    
-    pose = random.choice(POSES)
-    expression = random.choice(EXPRESSIONS)
-    accessory = random.choice(ACCESSORIES)
     
     negative_prompts = [
-        "未成年感", "年龄小于18岁", "年龄大于30岁",
+        "年龄小于18岁", "未成年感",
+        "年龄大于30岁", "成熟感",
         "男性特征",
-        "身材臃肿", "比例失调", "平板身材", "无曲线感", "胸部平坦", "五五分身材", "六四分身材",
+        "身材臃肿", "比例失调", "平板身材", "无曲线感", "胸部平坦", "五五分身材", "六四分身材", "非九头身",
         "夸张妆容", "不自然表情",
         "僵硬姿势", "呆板站姿", "游客照摆拍", "双手自然下垂", "表情空洞", "眼神呆滞", "身体紧绷",
-        "正式服装", "西装", "礼服", "暴露服装", "复杂图案抢镜", "大面积亮色", "品牌logo明显",
-        "工装裤", "短款背心", "crop tops", "基础款白T恤", "牛仔裤", "平庸穿搭", "运动服",
+        "正式服装", "西装", "礼服", "通勤风格", "商务风格", "暴露服装", "复杂图案抢镜", "大面积亮色", "品牌logo明显",
+        "工装裤", "短款背心", "crop tops", "基础款白T恤", "牛仔裤", "平庸穿搭", "普通运动服",
         "路人感", "居家感", "甜美少女风", "可爱风",
-        "杂乱背景", "其他人物抢镜", "不雅场景",
+        "杂乱背景", "其他人物抢镜", "品牌logo明显", "不雅场景",
         "俯拍", "仰拍", "人物太满", "人物太小", "过度后期", "不自然光线", "模糊不清",
-        "深景深", "背景过于清晰", "非3:4比例", "价格信息",
+        "深景深", "背景过于清晰", "非3:4比例",
+        "价格信息", "促销信息",
+        "产品模糊", "产品被遮挡", "毛绒挂件悬浮", "挂件漂浮", "挂件悬空", "挂件未挂在包上", "挂件穿模", "挂件位置错乱", "挂件脱离包体", "挂件无挂扣连接", "挂件浮空", "不合理悬挂", "错位", "漂浮物体", "悬空物体", "穿帮",
     ]
     
     prompt = f"""
     时尚潮玩穿搭博主风格，产品穿搭展示：
     
-    主体描述：
-    - 一位20-28岁的年轻女性，身材匀称有曲线感，比例协调，胸部挺拔
-    - {pose}，{expression}
-    - 自然妆容，不夸张
+    人物规范（禁止事项）：
+    - 不要出现未成年感，年龄<18岁
+    - 不要出现成熟感，年龄>30岁
+    - 不要出现男性特征
+    - 不要身材臃肿，比例失调
+    - 不要平板身材，无曲线感
+    - 不要胸部平坦，无挺拔感
+    - 不要非九头身比例
+    - 不要夸张妆容
+    - 不要不自然表情
+    - 不要僵硬、呆板的站姿
+    - 不要游客照式的摆拍动作
+    - 不要双手自然下垂的僵硬姿势
+    - 不要表情空洞，眼神呆滞
+    - 不要身体紧绷，不自然
     
-    穿搭风格：
-    - {style_desc}
-    - {color_desc}主色调
-    - 佩戴{accessory}
-    - 不要出现西装、礼服、暴露服装、工装裤、短款背心、白T恤配牛仔裤
+    穿搭规范（禁止事项）：
+    - 不要出现过于正式的服装（西装、礼服等）
+    - 不要出现暴露服装
+    - 不要出现复杂图案抢镜
+    - 不要出现大面积亮色
+    - 不要出现品牌logo明显
+    - 不要出现工装裤
+    - 不要出现短款背心、crop tops
+    - 不要出现基础款白T恤+牛仔裤的平庸穿搭
+    - 不要出现平庸穿搭
+    - 不要出现路人感、居家感
+    - 不要出现甜美少女风、可爱风
     
-    产品展示：
+    产品展示（禁止事项）：
+    - 不要让产品过于隐蔽看不清
+    - 不要让其他元素抢产品的风头
+    - 不要改变产品颜色、款式、材质
+    - 不要产品模糊
+    - 不要产品被遮挡
+    - 不要毛绒挂件悬浮
+    - 不要挂件漂浮
+    - 不要挂件悬空
+    - 不要挂件未挂在包上
+    - 不要挂件穿模
+    - 不要挂件位置错乱
+    - 不要挂件脱离包体
+    - 不要挂件无挂扣连接
+    - 不要挂件浮空
+    - 不要不合理悬挂
+    - 不要错位
+    - 不要漂浮物体
+    - 不要悬空物体
+    - 不要穿帮
+    
+    场景规范（禁止事项）：
+    - 不要出现过于杂乱的背景
+    - 不要出现其他人物抢镜
+    - 不要出现品牌logo明显
+    - 不要出现不雅场景
+    
+    拍摄规范（禁止事项）：
+    - 不要俯拍或仰拍，只允许平拍
+    - 不要人物太满（脑袋和脚顶到画面边缘）
+    - 不要人物太小看不清穿搭
+    - 不要出现过度后期效果
+    - 不要出现不自然光线
+    - 不要出现模糊不清
+    - 不要出现全景清晰（深景深）
+    - 不要出现背景过于清晰抢镜
+    - 不要出现非3:4比例
+    - 不要让人物太满，脑袋和脚顶到画面边缘
+    
+    商业规范（禁止事项）：
+    - 不要出现价格信息
+    - 不要出现促销信息
+    
+    核心要求：
     - 身上佩戴或手持{product_name}
-    - {product_desc if product_desc else '时尚潮玩产品'}
-    - 产品作为主要展示对象，不要被其他元素抢风头
-    
-    场景环境：
-    - {scene_desc}
-    - 背景简洁不杂乱
-    
-    拍摄要求：
-    - 平拍视角（eye-level）
-    - 中远景（medium-wide shot），人物占画面约1/2高度
-    - 浅景深，背景虚化
-    - 3:4比例
-    - 人物主体占画面约1/2到3/4，头部上方和脚下留有余量
-    - 自然光线，清晰画质
-    
-    负面提示：
-    - {', '.join(negative_prompts)}
+    - {product_desc if product_desc else '潮玩产品'}
+    - 保持产品与参考图一致
+    - 人是穿搭的核心！
     """
     
     return prompt.strip()
@@ -279,7 +254,7 @@ def main():
         epilog=f"""
 示例:
   python toy_outfit_generator.py --product "毛绒挂件" --output outfit.png
-  python toy_outfit_generator.py --product "潮玩手办" --ref-image product.jpg --style streetwear --color black --output street.png
+  python toy_outfit_generator.py --product "潮玩手办" --ref-image product.jpg --output street.png
 
 环境变量:
   IMAGE_GEN_API_KEY    API密钥（必需）
@@ -293,9 +268,6 @@ def main():
     parser.add_argument("--ref-image", action="append", help="产品参考图路径（图生图模式，可多次使用）")
     parser.add_argument("--ref-url", action="append", help="产品参考图URL（自动下载，可多次使用）")
     parser.add_argument("--output", required=True, help="输出文件路径")
-    parser.add_argument("--style", choices=STYLES.keys(), help="穿搭风格")
-    parser.add_argument("--color", choices=COLORS.keys(), help="主色调")
-    parser.add_argument("--scene", choices=SCENES.keys(), help="场景类型")
     parser.add_argument("--api-url", help="API地址")
     parser.add_argument("--api-key", help="API密钥")
     parser.add_argument("--model", help="模型名称")

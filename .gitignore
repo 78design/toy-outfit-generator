@@ -42,3 +42,8 @@ id_rsa
 id_dsa
 *.env.local
 *.env.*.local
+
+# Build
+dist/
+pack.sh
+

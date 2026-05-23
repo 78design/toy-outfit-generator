@@ -1,13 +1,13 @@
 # 潮玩穿搭图生成工具
 
-专为潮玩博主设计的通用穿搭图生成工具，支持文生图和图生图模式，集成严格的时尚穿搭摄影规范。
+专为潮玩博主设计的通用穿搭图生成工具，支持文生图和图生图模式，采用反向规范控制（只说明禁止事项，不指定明确风格）。
 
 ## 核心特点
 
-- **通用设计**：适用于各类潮玩产品（毛绒挂件、手办、盲盒等）
+- **通用设计**：适用于各类潮玩产品（毛绒挂件、手办、盲盒、零钱包等）
 - **灵活输入**：支持本地图片和远程URL两种参考图模式
-- **严格规范控制**：年龄、性别、身材、妆容等多维度约束
-- **丰富变化**：自动避免重复的颜色组合和穿搭风格
+- **反向规范控制**：只说明禁止事项，不限制具体风格、色彩，让AI有更大发挥空间
+- **产品一致性**：支持参考图模式，保持产品特征一致
 
 ## 快速开始
 
@@ -37,15 +37,13 @@ python toy_outfit_generator.py --product "毛绒挂件" --output outfit.png
 **图生图模式（本地图片）：**
 ```bash
 python toy_outfit_generator.py --product "潮玩手办" \
-  --ref-image product.jpg --style streetwear --color black \
-  --output street.png
+  --ref-image product.jpg --output street.png
 ```
 
 **图生图模式（远程URL）：**
 ```bash
 python toy_outfit_generator.py --product "盲盒公仔" \
-  --ref-url "https://example.com/product.jpg" --style urban \
-  --output product.png
+  --ref-url "https://example.com/product.jpg" --output product.png
 ```
 
 ## 命令参数
@@ -55,78 +53,119 @@ python toy_outfit_generator.py --product "盲盒公仔" \
 | `--product` | ✅ | 产品名称 |
 | `--desc` | ❌ | 产品描述 |
 | `--ref-image` | ❌ | 产品参考图路径（可多次使用） |
-| `--ref-url` | ❌ | 产品参考图URL（自动下载，可多次使用） |
+| `--ref-url` | ❌ | 产品参考图URL（可多次使用） |
 | `--output` | ✅ | 输出文件路径 |
-| `--style` | ❌ | 穿搭风格 |
-| `--color` | ❌ | 主色调 |
-| `--scene` | ❌ | 场景类型 |
 | `--api-url` | ❌ | API地址（覆盖环境变量） |
 | `--api-key` | ❌ | API密钥（覆盖环境变量） |
 | `--model` | ❌ | 模型名称（覆盖环境变量） |
 
-## 穿搭风格
+## 摄影规范（禁止事项）
 
-| 风格 | 描述 |
-|------|------|
-| streetwear | 街头潮流风格，oversize版型，个性配饰 |
-| techwear | 机能风，科技面料，多口袋设计 |
-| urban | 都市休闲风格，简约时尚，质感面料 |
-| avant-garde | 先锋前卫风格，独特剪裁，艺术感设计 |
-| casual | 休闲时尚风格，舒适自在，日常穿搭 |
-| vintage | 复古风格，经典元素，怀旧氛围 |
+### 人物规范（禁止事项）
+- ❌ 不要出现未成年感，年龄<18岁
+- ❌ 不要出现成熟感，年龄>30岁
+- ❌ 不要出现男性特征
+- ❌ 不要身材臃肿，比例失调
+- ❌ 不要平板身材，无曲线感
+- ❌ 不要胸部平坦，无挺拔感
+- ❌ 不要非九头身比例
+- ❌ 不要夸张妆容
+- ❌ 不要不自然表情
+- ❌ 不要僵硬、呆板的站姿
+- ❌ 不要游客照式的摆拍动作
+- ❌ 不要双手自然下垂的僵硬姿势
+- ❌ 不要表情空洞，眼神呆滞
+- ❌ 不要身体紧绷，不自然
 
-## 颜色选项
+### 穿搭规范（禁止事项）
+- ❌ 不要出现过于正式的服装（西装、礼服等）
+- ❌ 不要出现暴露服装
+- ❌ 不要出现复杂图案抢镜
+- ❌ 不要出现大面积亮色
+- ❌ 不要出现品牌logo明显
+- ❌ 不要出现工装裤
+- ❌ 不要出现短款背心、crop tops
+- ❌ 不要出现基础款白T恤+牛仔裤的平庸穿搭
+- ❌ 不要出现平庸穿搭
+- ❌ 不要出现路人感、居家感
+- ❌ 不要出现甜美少女风、可爱风
 
-black, white, gray, navy, olive, cream, beige, burgundy, forest, charcoal
+### 产品展示（禁止事项）
+- ❌ 不要让产品过于隐蔽看不清
+- ❌ 不要让其他元素抢产品的风头
+- ❌ 不要改变产品颜色、款式、材质
+- ❌ 不要产品模糊
+- ❌ 不要产品被遮挡
+- ❌ 不要毛绒挂件悬浮
+- ❌ 不要挂件漂浮
+- ❌ 不要挂件悬空
+- ❌ 不要挂件未挂在包上
+- ❌ 不要挂件穿模
+- ❌ 不要挂件位置错乱
+- ❌ 不要挂件脱离包体
+- ❌ 不要挂件无挂扣连接
+- ❌ 不要挂件浮空
+- ❌ 不要不合理悬挂
+- ❌ 不要错位
+- ❌ 不要漂浮物体
+- ❌ 不要悬空物体
+- ❌ 不要穿帮
 
-## 场景类型
+### 场景规范（禁止事项）
+- ❌ 不要出现过于杂乱的背景
+- ❌ 不要出现其他人物抢镜
+- ❌ 不要出现品牌logo明显
+- ❌ 不要出现不雅场景
 
-| 场景 | 描述 |
-|------|------|
-| urban_street | 城市街头，现代建筑背景 |
-| cafe | 潮流咖啡馆，工业风装修 |
-| rooftop | 城市天台，日落时分 |
-| studio | 简约摄影棚，干净背景 |
-| gallery | 艺术画廊，现代展览空间 |
-| street_art | 街头艺术墙，涂鸦背景 |
+### 拍摄规范（禁止事项）
+- ❌ 不要俯拍或仰拍，只允许平拍
+- ❌ 不要人物太满（脑袋和脚顶到画面边缘）
+- ❌ 不要人物太小看不清穿搭
+- ❌ 不要出现过度后期效果
+- ❌ 不要出现不自然光线
+- ❌ 不要出现模糊不清
+- ❌ 不要出现全景清晰（深景深）
+- ❌ 不要出现背景过于清晰抢镜
+- ❌ 不要出现非3:4比例
+- ❌ 不要让人物太满，脑袋和脚顶到画面边缘
 
-## 摄影规范
+### 商业规范（禁止事项）
+- ❌ 不要出现价格信息
+- ❌ 不要出现促销信息
 
-### 人物规范
-- 年龄：18-30岁女性
-- 身材：匀称有曲线感，比例协调
-- 妆容：自然不夸张
-- 姿态：自然放松，避免僵硬摆拍
-
-### 穿搭规范
-- 风格：时尚酷感、街头潮流、个性设计感
-- 禁忌：正式服装、暴露服装、品牌logo明显、基础款白T牛仔裤
-
-### 拍摄规范
-- 角度：平拍（eye-level）
-- 景别：中远景，人物占画面约1/2高度
-- 景深：浅景深，背景虚化
-- 比例：3:4
+### 核心要求
+- 产品挂在包包上、拿在手里、放在口袋旁都可以
+- 产品要清晰可见
+- 人是穿搭的核心！
 
 ## 示例
 
 ```bash
-# 生成街头风格穿搭
-python toy_outfit_generator.py --product "毛绒挂件" \
-  --style streetwear --color black \
-  --ref-image product.jpg --output street_style.png
+# 生成穿搭图（文生图）
+python toy_outfit_generator.py --product "毛绒挂件" --output outfit.png
 
-# 生成城市天台场景
+# 生成穿搭图（图生图）
 python toy_outfit_generator.py --product "潮玩手办" \
-  --desc "精致的动漫手办，色彩丰富" \
-  --style techwear --color gray --scene rooftop \
-  --output rooftop_outfit.png
+  --ref-image product.jpg --output street_style.png
 
 # 使用远程URL作为参考图
 python toy_outfit_generator.py --product "盲盒公仔" \
-  --ref-url "https://example.com/product.jpg" \
-  --style urban --color beige --output urban_style.png
+  --ref-url "https://example.com/product.jpg" --output product.png
+
+# 带产品描述
+python toy_outfit_generator.py --product "疯兔怪" \
+  --desc "萌牙怪兽毛绒挂件" \
+  --ref-image product.jpg --output fashion_疯兔怪_001.png
 ```
+
+## 版本更新
+
+### v2.0.0 (2026-05-22)
+- **重大更新**：规范系统重构为反向规范模式
+- 只说明禁止事项，不限制具体风格、色彩
+- 移除了style/color/scene参数
+- 新增更详细的产品展示禁止规范
+- 保持核心功能不变
 
 ## 许可证
 
