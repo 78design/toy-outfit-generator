@@ -289,11 +289,10 @@ def main():
         ref_images.extend(args.ref_image)
     
     if args.ref_url:
-        with tempfile.TemporaryDirectory() as tmpdir:
-            for idx, url in enumerate(args.ref_url):
-                tmp_path = os.path.join(tmpdir, f"ref_{idx}.png")
-                if download_image_from_url(url, tmp_path):
-                    ref_images.append(tmp_path)
+        for idx, url in enumerate(args.ref_url):
+            tmp_path = os.path.join(os.getcwd(), f"ref_{idx}.png")
+            if download_image_from_url(url, tmp_path):
+                ref_images.append(tmp_path)
     
     print("构建穿搭提示词...")
     prompt = build_prompt(args.product, args.desc)
