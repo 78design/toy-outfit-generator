@@ -1,0 +1,44 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+.env
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Images (generated output)
+*.png
+*.jpg
+*.jpeg
+*.webp
+*.gif
+*.bmp
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Cache
+*.tmp
+*.bak
+*.swp
+*.swo
+*~
+
+# Security
+*.pem
+*.key
+*.p12
+*.pfx
+id_rsa
+id_dsa
+*.env.local
+*.env.*.local
