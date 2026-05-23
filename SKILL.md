@@ -1,7 +1,7 @@
 ---
 name: toy-outfit-generator
 description: 潮玩穿搭图生成工具 - 专为潮玩博主设计的通用穿搭图生成工具
-version: 2.0.2
+version: 2.0.3
 ---
 
 # 潮玩穿搭图生成工具
@@ -209,12 +209,23 @@ python toy_outfit_generator.py --product "疯兔怪" \
 .
 ├── SKILL.md                # 技能说明文档
 ├── README.md              # 项目说明文档
+├── INSTALL.md              # 专门安装说明文档
 ├── toy_outfit_generator.py # 主程序文件
+├── install.sh            # 本地安装脚本
+├── install-online.sh      # 在线安装脚本
 ├── requirements.txt       # Python依赖
+├── .env.example          # 环境变量配置示例
 └── .gitignore            # Git忽略配置
 ```
 
 ## 版本更新
+
+### v2.0.3 (2026-05-23)
+- **格式标准化**：按照标准技能格式整理项目结构
+- 新增 `install.sh` 本地安装脚本
+- 新增 `.env.example` 配置文件示例
+- 新增 `INSTALL.md` 专门的安装说明文档
+- 更新在线安装脚本配合标准格式
 
 ### v2.0.0 (2026-05-22)
 - **重大更新**：规范系统重构为反向规范模式
