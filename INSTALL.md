@@ -2,14 +2,38 @@
 
 ## 快速安装
 
-### 方式一：使用安装脚本（推荐）
+### 方式一：标准技能安装命令（最推荐！）
+
+```bash
+npx skills add 78design/toy-outfit-generator
+```
+
+或者使用完整 GitHub URL：
+
+```bash
+npx skills add https://github.com/78design/toy-outfit-generator
+```
+
+### 方式二：在线一键安装
+
+使用 curl：
+```bash
+bash -c "$(curl -fsSL https://raw.githubusercontent.com/78design/toy-outfit-generator/main/install-online.sh)"
+```
+
+使用 wget：
+```bash
+bash -c "$(wget -O- https://raw.githubusercontent.com/78design/toy-outfit-generator/main/install-online.sh)"
+```
+
+### 方式三：使用本地安装脚本
 
 ```bash
 chmod +x install.sh
 ./install.sh
 ```
 
-### 方式二：手动安装
+### 方式四：手动安装
 
 1. 安装依赖：
 ```bash

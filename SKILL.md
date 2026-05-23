@@ -8,7 +8,21 @@ version: 2.0.3
 
 专为潮玩博主设计的通用穿搭图生成工具，支持文生图和图生图模式，采用反向规范控制（只说明禁止事项，不指定明确风格）。
 
-## 🚀 一键在线安装（推荐！）
+## 🚀 安装方式
+
+### 方式一：标准技能安装命令（最推荐！）
+
+```bash
+npx skills add 78design/toy-outfit-generator
+```
+
+或者使用完整 GitHub URL：
+
+```bash
+npx skills add https://github.com/78design/toy-outfit-generator
+```
+
+### 方式二：在线一键安装
 
 使用 curl 一键安装：
 
