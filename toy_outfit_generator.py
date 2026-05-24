@@ -270,7 +270,6 @@ def main():
         """
     )
 
-    parser.add_argument("--version", "-v", action="version", version=f"%(prog)s v{__version__}")
     parser.add_argument("--product", required=True, help="产品名称")
     parser.add_argument("--desc", help="产品描述")
     parser.add_argument("--ref-image", action="append", help="产品参考图路径（图生图模式，可多次使用）")
