@@ -1,7 +1,7 @@
 ---
 name: toy-outfit-generator
 description: 潮玩穿搭图生成工具 - 专为潮玩博主设计的通用穿搭图生成工具
-version: 2.0.3
+version: 2.1.0
 ---
 
 # 潮玩穿搭图生成工具
@@ -233,6 +233,11 @@ python toy_outfit_generator.py --product "疯兔怪" \
 ```
 
 ## 版本更新
+
+### v2.1.0 (2026-05-24)
+- **优化**：修复临时文件清理问题
+- **优化**：移除未使用的 import
+- **新增**：`npx skills add` 标准技能安装命令
 
 ### v2.0.3 (2026-05-23)
 - **格式标准化**：按照标准技能格式整理项目结构

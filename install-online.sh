@@ -2,7 +2,7 @@
 # toy-outfit-generator 在线安装脚本
 # 一键安装潮玩穿搭图生成工具
 
-VERSION="2.0.3"
+VERSION="2.1.0"
 REPO_URL="https://github.com/78design/toy-outfit-generator.git"
 DIR_NAME="toy-outfit-generator"
 

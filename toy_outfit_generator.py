@@ -9,7 +9,6 @@ import base64
 import os
 import re
 import sys
-import tempfile
 from pathlib import Path
 
 try:
@@ -284,6 +283,7 @@ def main():
         sys.exit(1)
 
     ref_images = []
+    temp_files = []
     
     if args.ref_image:
         ref_images.extend(args.ref_image)
@@ -293,6 +293,7 @@ def main():
             tmp_path = os.path.join(os.getcwd(), f"ref_{idx}.png")
             if download_image_from_url(url, tmp_path):
                 ref_images.append(tmp_path)
+                temp_files.append(tmp_path)
     
     print("构建穿搭提示词...")
     prompt = build_prompt(args.product, args.desc)
@@ -306,6 +307,15 @@ def main():
         image_files=ref_images if ref_images else None,
         output_path=args.output
     )
+
+    # 清理临时文件
+    for temp_file in temp_files:
+        if os.path.exists(temp_file):
+            try:
+                os.remove(temp_file)
+                print(f"   Cleaned up: {temp_file}")
+            except Exception as e:
+                print(f"   Warning: Failed to clean up {temp_file}: {e}")
 
     if result:
         sys.exit(0)
