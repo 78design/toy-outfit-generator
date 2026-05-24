@@ -4,11 +4,19 @@
 专为潮玩博主设计的通用穿搭图生成工具
 """
 
+__version__ = "2.2.0"
+
 import argparse
-import base64
 import os
-import re
 import sys
+
+# 先检查 --version 选项，避免依赖检查影响版本查看
+if "--version" in sys.argv or "-v" in sys.argv:
+    print(f"toy_outfit_generator.py v{__version__}")
+    sys.exit(0)
+
+import base64
+import re
 from pathlib import Path
 
 try:
@@ -248,7 +256,7 @@ def generate_image(prompt, api_url, api_key, model, image_files=None, output_pat
 
 def main():
     parser = argparse.ArgumentParser(
-        description="潮玩穿搭图生成工具",
+        description=f"潮玩穿搭图生成工具 v{__version__}",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog=f"""
 示例:
@@ -262,6 +270,7 @@ def main():
         """
     )
 
+    parser.add_argument("--version", "-v", action="version", version=f"%(prog)s v{__version__}")
     parser.add_argument("--product", required=True, help="产品名称")
     parser.add_argument("--desc", help="产品描述")
     parser.add_argument("--ref-image", action="append", help="产品参考图路径（图生图模式，可多次使用）")
@@ -272,6 +281,9 @@ def main():
     parser.add_argument("--model", help="模型名称")
 
     args = parser.parse_args()
+
+    print(f"潮玩穿搭图生成工具 v{__version__}")
+    print("=" * 50)
 
     api_key = args.api_key or os.environ.get("IMAGE_GEN_API_KEY")
     api_url = args.api_url or os.environ.get("IMAGE_GEN_API_URL", "https://api.1openapi.com/v1")
