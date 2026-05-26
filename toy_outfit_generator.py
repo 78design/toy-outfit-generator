@@ -4,15 +4,46 @@
 专为潮玩博主设计的通用穿搭图生成工具
 """
 
-__version__ = "2.2.0"
+__version__ = "2.3.0"
 
 import argparse
 import os
+import random
 import sys
+import time
 
-# 先检查 --version 选项，避免依赖检查影响版本查看
+# 先检查 --version 和 -h/--help 选项，避免依赖检查影响这些操作
 if "--version" in sys.argv or "-v" in sys.argv:
     print(f"toy_outfit_generator.py v{__version__}")
+    sys.exit(0)
+if "-h" in sys.argv or "--help" in sys.argv:
+    # 只做基本的帮助输出，不导入 requests
+    parser = argparse.ArgumentParser(
+        description=f"潮玩穿搭图生成工具 v{__version__}",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog=f"""
+示例:
+  python toy_outfit_generator.py --product "毛绒挂件" --output outfit.png
+  python toy_outfit_generator.py --product "潮玩手办" --ref-image product.jpg --output street.png
+  python toy_outfit_generator.py --product "毛绒挂件" --output outfit.png --count 3 --seed 12345
+
+环境变量:
+  IMAGE_GEN_API_KEY    API密钥（必需）
+  IMAGE_GEN_API_URL    API地址（默认：https://api.1openapi.com/v1）
+  IMAGE_GEN_MODEL      模型名称（默认：openai/gpt-image-2）
+        """
+    )
+    parser.add_argument("--product", required=True, help="产品名称")
+    parser.add_argument("--desc", help="产品描述")
+    parser.add_argument("--ref-image", action="append", help="产品参考图路径（图生图模式，可多次使用）")
+    parser.add_argument("--ref-url", action="append", help="产品参考图URL（自动下载，可多次使用）")
+    parser.add_argument("--output", required=True, help="输出文件路径")
+    parser.add_argument("--api-url", help="API地址")
+    parser.add_argument("--api-key", help="API密钥")
+    parser.add_argument("--model", help="模型名称")
+    parser.add_argument("--count", type=int, default=1, help="生成图片数量（默认：1）")
+    parser.add_argument("--seed", type=int, help="随机种子（用于复现结果）")
+    parser.print_help()
     sys.exit(0)
 
 import base64
@@ -55,7 +86,10 @@ def extract_image_url_from_markdown(content):
 # 保持兼容性别名
 download_image = download_image_from_url
 
-def build_prompt(product_name, product_desc=""):
+def build_prompt(product_name, product_desc="", random_seed=None):
+    # 生成随机种子
+    if random_seed is None:
+        random_seed = int(time.time() * 1000000) % 100000000
     
     negative_prompts = [
         "年龄小于18岁", "未成年感",
@@ -75,7 +109,7 @@ def build_prompt(product_name, product_desc=""):
     ]
     
     prompt = f"""
-    时尚潮玩穿搭博主风格，产品穿搭展示：
+    时尚潮玩穿搭博主风格，产品穿搭展示（随机种子: {random_seed}）：
     
     人物规范（禁止事项）：
     - 不要出现未成年感，年龄<18岁
@@ -156,7 +190,7 @@ def build_prompt(product_name, product_desc=""):
     - 人是穿搭的核心！
     """
     
-    return prompt.strip()
+    return prompt.strip(), random_seed
 
 def generate_image(prompt, api_url, api_key, model, image_files=None, output_path=None):
     if not api_url.endswith("/chat/completions"):
@@ -262,6 +296,7 @@ def main():
 示例:
   python toy_outfit_generator.py --product "毛绒挂件" --output outfit.png
   python toy_outfit_generator.py --product "潮玩手办" --ref-image product.jpg --output street.png
+  python toy_outfit_generator.py --product "毛绒挂件" --output outfit.png --count 3 --seed 12345
 
 环境变量:
   IMAGE_GEN_API_KEY    API密钥（必需）
@@ -278,6 +313,8 @@ def main():
     parser.add_argument("--api-url", help="API地址")
     parser.add_argument("--api-key", help="API密钥")
     parser.add_argument("--model", help="模型名称")
+    parser.add_argument("--count", type=int, default=1, help="生成图片数量（默认：1）")
+    parser.add_argument("--seed", type=int, help="随机种子（用于复现结果）")
 
     args = parser.parse_args()
 
@@ -293,6 +330,11 @@ def main():
         print("请通过 --api-key 参数或设置 IMAGE_GEN_API_KEY 环境变量")
         sys.exit(1)
 
+    # 验证数量参数
+    if args.count < 1:
+        print("Error: 生成数量必须大于0")
+        sys.exit(1)
+
     ref_images = []
     temp_files = []
     
@@ -306,20 +348,44 @@ def main():
                 ref_images.append(tmp_path)
                 temp_files.append(tmp_path)
     
-    print("构建穿搭提示词...")
-    prompt = build_prompt(args.product, args.desc)
-    
-    print("生成图片...")
-    result = generate_image(
-        prompt=prompt,
-        api_url=api_url,
-        api_key=api_key,
-        model=model,
-        image_files=ref_images if ref_images else None,
-        output_path=args.output
-    )
+    success_count = 0
+
+    # 生成多张图
+    for i in range(args.count):
+        print(f"\n--- 生成第 {i+1}/{args.count} 张图 ---")
+        
+        # 计算当前的随机种子
+        current_seed = args.seed
+        if current_seed is not None:
+            current_seed = current_seed + i
+        
+        print("构建穿搭提示词...")
+        prompt, used_seed = build_prompt(args.product, args.desc, current_seed)
+        print(f"   使用随机种子: {used_seed}")
+        
+        # 确定输出文件名
+        if args.count == 1:
+            output_path = args.output
+        else:
+            # 如果是多张图，自动添加序号
+            path_obj = Path(args.output)
+            output_path = str(path_obj.parent / f"{path_obj.stem}_{i+1}{path_obj.suffix}")
+        
+        print("生成图片...")
+        result = generate_image(
+            prompt=prompt,
+            api_url=api_url,
+            api_key=api_key,
+            model=model,
+            image_files=ref_images if ref_images else None,
+            output_path=output_path
+        )
+        
+        if result:
+            success_count += 1
 
     # 清理临时文件
+    print("\n--- 清理临时文件 ---")
     for temp_file in temp_files:
         if os.path.exists(temp_file):
             try:
@@ -328,7 +394,11 @@ def main():
             except Exception as e:
                 print(f"   Warning: Failed to clean up {temp_file}: {e}")
 
-    if result:
+    # 输出结果统计
+    print(f"\n--- 完成 ---")
+    print(f"成功生成: {success_count}/{args.count} 张图")
+
+    if success_count > 0:
         sys.exit(0)
     else:
         sys.exit(1)
