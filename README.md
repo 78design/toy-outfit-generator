@@ -2,9 +2,38 @@
 
 专为潮玩博主设计的通用穿搭图生成工具，支持文生图和图生图模式，采用反向规范控制（只说明禁止事项，不指定明确风格）。
 
-## 🚀 安装方式
+## 🚀 安装方式（四种方式任选其一）
 
-### 方式一：标准技能安装命令（最推荐！）
+### 方式一：下载安装包（推荐！离线可用）
+
+直接下载压缩包，解压后一键安装：
+
+```bash
+# 下载最新版本安装包
+wget https://github.com/78design/toy-outfit-generator/releases/latest/download/toy-outfit-generator-3.0.0.zip
+
+# 解压并安装
+unzip toy-outfit-generator-3.0.0.zip
+cd toy-outfit-generator-3.0.0
+chmod +x install.sh
+./install.sh
+```
+
+### 方式二：在线一键安装
+
+使用 curl 一键安装：
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/78design/toy-outfit-generator/main/install.sh | bash
+```
+
+或者使用 wget：
+
+```bash
+bash -c "$(wget -O- https://raw.githubusercontent.com/78design/toy-outfit-generator/main/install.sh)"
+```
+
+### 方式三：标准技能安装命令
 
 ```bash
 npx skills add 78design/toy-outfit-generator
@@ -16,18 +45,14 @@ npx skills add 78design/toy-outfit-generator
 npx skills add https://github.com/78design/toy-outfit-generator
 ```
 
-### 方式二：在线一键安装
+### 方式四：手动安装
 
-使用 curl 一键安装：
-
-```bash
-bash -c "$(curl -fsSL https://raw.githubusercontent.com/78design/toy-outfit-generator/main/install-online.sh)"
-```
-
-或者使用 wget：
+克隆仓库后手动安装依赖：
 
 ```bash
-bash -c "$(wget -O- https://raw.githubusercontent.com/78design/toy-outfit-generator/main/install-online.sh)"
+git clone https://github.com/78design/toy-outfit-generator.git
+cd toy-outfit-generator
+pip install -r requirements.txt
 ```
 
 ---
@@ -189,6 +214,17 @@ python toy_outfit_generator.py --product "疯兔怪" \
 ```
 
 ## 版本更新
+
+### v3.0.0 (2026-05-27)
+- **重大优化**：代码全面重构，提升可维护性和规范性
+- **新增**：完整的类型提示（Type Hints），提升代码质量
+- **新增**：标准化的 Google 风格文档字符串（docstring）
+- **新增**：专业的日志系统，使用 logging 模块替代 print
+- **新增**：自动创建输出目录功能（ensure_output_dir）
+- **新增**：GitHub Actions 自动化工作流，自动生成安装包
+- **优化**：消除重复代码，提取公共函数
+- **优化**：异常处理更完善，临时文件下载增加保护
+- **提供四种安装方式**：压缩包、在线安装、技能安装、手动安装
 
 ### v2.3.0 (2026-05-26)
 - **重要优化**：解决了生成多张图返回相同图片的问题
