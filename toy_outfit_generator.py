@@ -4,24 +4,38 @@
 专为潮玩博主设计的通用穿搭图生成工具
 """
 
-__version__ = "2.3.0"
+__version__ = "3.0.0"
 
 import argparse
+import base64
+import logging
 import os
 import random
+import re
 import sys
 import time
+from pathlib import Path
+from typing import List, Optional, Tuple
+
+# 配置日志
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(message)s",
+    handlers=[logging.StreamHandler()]
+)
+logger = logging.getLogger(__name__)
 
 # 先检查 --version 和 -h/--help 选项，避免依赖检查影响这些操作
 if "--version" in sys.argv or "-v" in sys.argv:
     print(f"toy_outfit_generator.py v{__version__}")
     sys.exit(0)
+
 if "-h" in sys.argv or "--help" in sys.argv:
-    # 只做基本的帮助输出，不导入 requests
+    from argparse import RawDescriptionHelpFormatter
     parser = argparse.ArgumentParser(
         description=f"潮玩穿搭图生成工具 v{__version__}",
-        formatter_class=argparse.RawDescriptionHelpFormatter,
-        epilog=f"""
+        formatter_class=RawDescriptionHelpFormatter,
+        epilog="""
 示例:
   python toy_outfit_generator.py --product "毛绒挂件" --output outfit.png
   python toy_outfit_generator.py --product "潮玩手办" --ref-image product.jpg --output street.png
@@ -46,22 +60,39 @@ if "-h" in sys.argv or "--help" in sys.argv:
     parser.print_help()
     sys.exit(0)
 
-import base64
-import re
-from pathlib import Path
-
 try:
     import requests
 except ImportError:
-    print("Error: requests library not installed.")
-    print("Run: pip install requests")
+    logger.error("Error: requests library not installed.")
+    logger.error("Run: pip install requests")
     sys.exit(1)
 
-def encode_image_to_base64(image_path):
+
+def encode_image_to_base64(image_path: str) -> str:
+    """
+    将图片文件编码为base64字符串
+
+    Args:
+        image_path: 图片文件路径
+
+    Returns:
+        base64编码的字符串
+    """
     with open(image_path, "rb") as f:
         return base64.b64encode(f.read()).decode("utf-8")
 
-def download_image_from_url(url, output_path):
+
+def download_image_from_url(url: str, output_path: str) -> bool:
+    """
+    从URL下载图片到本地
+
+    Args:
+        url: 图片URL
+        output_path: 输出文件路径
+
+    Returns:
+        是否下载成功
+    """
     try:
         headers = {
             "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
@@ -70,177 +101,170 @@ def download_image_from_url(url, output_path):
         response.raise_for_status()
         with open(output_path, "wb") as f:
             f.write(response.content)
-        print(f"   Downloaded reference image: {url}")
+        logger.info(f"   Downloaded reference image: {url}")
         return True
     except Exception as e:
-        print(f"   Failed to download image: {e}")
+        logger.error(f"   Failed to download image: {e}")
         return False
 
-def extract_image_url_from_markdown(content):
+
+def extract_image_url_from_markdown(content: str) -> Optional[str]:
+    """
+    从Markdown内容中提取图片URL
+
+    Args:
+        content: Markdown文本内容
+
+    Returns:
+        提取到的图片URL，未找到则返回None
+    """
     pattern = r'!\[.*?\]\((https?://[^\)]+)\)'
     match = re.search(pattern, content)
     if match:
         return match.group(1)
     return None
 
-# 保持兼容性别名
-download_image = download_image_from_url
 
-def build_prompt(product_name, product_desc="", random_seed=None):
-    # 生成随机种子
+def ensure_output_dir(output_path: str) -> None:
+    """
+    确保输出目录存在，不存在则创建
+
+    Args:
+        output_path: 输出文件路径
+    """
+    output_dir = Path(output_path).parent
+    if not output_dir.exists():
+        output_dir.mkdir(parents=True, exist_ok=True)
+        logger.info(f"   Created output directory: {output_dir}")
+
+
+def build_prompt(product_name: str, product_desc: str = "", random_seed: Optional[int] = None) -> Tuple[str, int]:
+    """
+    构建潮玩穿搭提示词
+
+    Args:
+        product_name: 产品名称
+        product_desc: 产品描述
+        random_seed: 随机种子
+
+    Returns:
+        (提示词文本, 使用的随机种子)
+    """
     if random_seed is None:
         random_seed = int(time.time() * 1000000) % 100000000
-    
-    negative_prompts = [
-        "年龄小于18岁", "未成年感",
-        "年龄大于30岁", "成熟感",
-        "男性特征",
-        "身材臃肿", "比例失调", "平板身材", "无曲线感", "胸部平坦", "五五分身材", "六四分身材", "非九头身",
-        "夸张妆容", "不自然表情",
-        "僵硬姿势", "呆板站姿", "游客照摆拍", "双手自然下垂", "表情空洞", "眼神呆滞", "身体紧绷",
-        "正式服装", "西装", "礼服", "通勤风格", "商务风格", "暴露服装", "复杂图案抢镜", "大面积亮色", "品牌logo明显",
-        "工装裤", "短款背心", "crop tops", "基础款白T恤", "牛仔裤", "平庸穿搭", "普通运动服",
-        "路人感", "居家感", "甜美少女风", "可爱风",
-        "杂乱背景", "其他人物抢镜", "品牌logo明显", "不雅场景",
-        "俯拍", "仰拍", "人物太满", "人物太小", "过度后期", "不自然光线", "模糊不清",
-        "深景深", "背景过于清晰", "非3:4比例",
-        "价格信息", "促销信息",
-        "产品模糊", "产品被遮挡", "毛绒挂件悬浮", "挂件漂浮", "挂件悬空", "挂件未挂在包上", "挂件穿模", "挂件位置错乱", "挂件脱离包体", "挂件无挂扣连接", "挂件浮空", "不合理悬挂", "错位", "漂浮物体", "悬空物体", "穿帮",
-    ]
-    
-    prompt = f"""
-    时尚潮玩穿搭博主风格，产品穿搭展示（随机种子: {random_seed}）：
-    
-    人物规范（禁止事项）：
-    - 不要出现未成年感，年龄<18岁
-    - 不要出现成熟感，年龄>30岁
-    - 不要出现男性特征
-    - 不要身材臃肿，比例失调
-    - 不要平板身材，无曲线感
-    - 不要胸部平坦，无挺拔感
-    - 不要非九头身比例
-    - 不要夸张妆容
-    - 不要不自然表情
-    - 不要僵硬、呆板的站姿
-    - 不要游客照式的摆拍动作
-    - 不要双手自然下垂的僵硬姿势
-    - 不要表情空洞，眼神呆滞
-    - 不要身体紧绷，不自然
-    
-    穿搭规范（禁止事项）：
-    - 不要出现过于正式的服装（西装、礼服等）
-    - 不要出现暴露服装
-    - 不要出现复杂图案抢镜
-    - 不要出现大面积亮色
-    - 不要出现品牌logo明显
-    - 不要出现工装裤
-    - 不要出现短款背心、crop tops
-    - 不要出现基础款白T恤+牛仔裤的平庸穿搭
-    - 不要出现平庸穿搭
-    - 不要出现路人感、居家感
-    - 不要出现甜美少女风、可爱风
-    
-    产品展示（禁止事项）：
-    - 不要让产品过于隐蔽看不清
-    - 不要让其他元素抢产品的风头
-    - 不要改变产品颜色、款式、材质
-    - 不要产品模糊
-    - 不要产品被遮挡
-    - 不要毛绒挂件悬浮
-    - 不要挂件漂浮
-    - 不要挂件悬空
-    - 不要挂件未挂在包上
-    - 不要挂件穿模
-    - 不要挂件位置错乱
-    - 不要挂件脱离包体
-    - 不要挂件无挂扣连接
-    - 不要挂件浮空
-    - 不要不合理悬挂
-    - 不要错位
-    - 不要漂浮物体
-    - 不要悬空物体
-    - 不要穿帮
-    
-    场景规范（禁止事项）：
-    - 不要出现过于杂乱的背景
-    - 不要出现其他人物抢镜
-    - 不要出现品牌logo明显
-    - 不要出现不雅场景
-    
-    拍摄规范（禁止事项）：
-    - 不要俯拍或仰拍，只允许平拍
-    - 不要人物太满（脑袋和脚顶到画面边缘）
-    - 不要人物太小看不清穿搭
-    - 不要出现过度后期效果
-    - 不要出现不自然光线
-    - 不要出现模糊不清
-    - 不要出现全景清晰（深景深）
-    - 不要出现背景过于清晰抢镜
-    - 不要出现非3:4比例
-    - 不要让人物太满，脑袋和脚顶到画面边缘
-    
-    商业规范（禁止事项）：
-    - 不要出现价格信息
-    - 不要出现促销信息
-    
-    核心要求：
-    - 身上佩戴或手持{product_name}
-    - {product_desc if product_desc else '潮玩产品'}
-    - 保持产品与参考图一致
-    - 人是穿搭的核心！
-    """
-    
-    return prompt.strip(), random_seed
 
-def generate_image(prompt, api_url, api_key, model, image_files=None, output_path=None):
+    forbidden_items = {
+        "人物规范": [
+            "年龄小于18岁", "未成年感",
+            "年龄大于30岁", "成熟感",
+            "男性特征",
+            "身材臃肿", "比例失调", "平板身材", "无曲线感", "胸部平坦", "五五分身材", "六四分身材", "非九头身",
+            "夸张妆容", "不自然表情",
+            "僵硬姿势", "呆板站姿", "游客照摆拍", "双手自然下垂", "表情空洞", "眼神呆滞", "身体紧绷"
+        ],
+        "穿搭规范": [
+            "正式服装", "西装", "礼服", "通勤风格", "商务风格", "暴露服装", "复杂图案抢镜", "大面积亮色", "品牌logo明显",
+            "工装裤", "短款背心", "crop tops", "基础款白T恤", "牛仔裤", "平庸穿搭", "普通运动服",
+            "路人感", "居家感", "甜美少女风", "可爱风"
+        ],
+        "产品展示": [
+            "产品模糊", "产品被遮挡", "毛绒挂件悬浮", "挂件漂浮", "挂件悬空", "挂件未挂在包上", "挂件穿模",
+            "挂件位置错乱", "挂件脱离包体", "挂件无挂扣连接", "挂件浮空", "不合理悬挂", "错位", "漂浮物体",
+            "悬空物体", "穿帮"
+        ],
+        "场景规范": [
+            "杂乱背景", "其他人物抢镜", "品牌logo明显", "不雅场景"
+        ],
+        "拍摄规范": [
+            "俯拍", "仰拍", "人物太满", "人物太小", "过度后期", "不自然光线", "模糊不清",
+            "深景深", "背景过于清晰", "非3:4比例"
+        ],
+        "商业规范": [
+            "价格信息", "促销信息"
+        ]
+    }
+
+    prompt_parts = [
+        f"时尚潮玩穿搭博主风格，产品穿搭展示（随机种子: {random_seed}）：",
+        ""
+    ]
+
+    for section, items in forbidden_items.items():
+        prompt_parts.append(f"{section}（禁止事项）：")
+        for item in items:
+            prompt_parts.append(f"- 不要{item}")
+        prompt_parts.append("")
+
+    prompt_parts.extend([
+        "核心要求：",
+        f"- 身上佩戴或手持{product_name}",
+        f"- {product_desc if product_desc else '潮玩产品'}",
+        "- 保持产品与参考图一致",
+        "- 人是穿搭的核心！"
+    ])
+
+    return "\n".join(prompt_parts).strip(), random_seed
+
+
+def generate_image(
+    prompt: str,
+    api_url: str,
+    api_key: str,
+    model: str,
+    image_files: Optional[List[str]] = None,
+    output_path: Optional[str] = None
+) -> Optional[str]:
+    """
+    调用API生成图片
+
+    Args:
+        prompt: 提示词
+        api_url: API地址
+        api_key: API密钥
+        model: 模型名称
+        image_files: 参考图片文件列表
+        output_path: 输出文件路径
+
+    Returns:
+        保存的文件路径或图片URL，失败返回None
+    """
     if not api_url.endswith("/chat/completions"):
-        if api_url.endswith("/"):
-            api_url = api_url + "chat/completions"
-        else:
-            api_url = api_url + "/chat/completions"
+        api_url = api_url.rstrip("/") + "/chat/completions"
 
     headers = {
         "Authorization": f"Bearer {api_key}",
         "Content-Type": "application/json"
     }
 
-    messages = [{"role": "user", "content": []}]
+    messages = [{"role": "user", "content": [{"type": "text", "text": prompt}]}]
 
-    messages[0]["content"].append({
-        "type": "text",
-        "text": prompt
-    })
-
-    if image_files and len(image_files) > 0:
-        valid_images = []
+    valid_images = []
+    if image_files:
         for image_file in image_files:
             if os.path.exists(image_file):
                 valid_images.append(image_file)
             else:
-                print(f"   Warning: Image file not found: {image_file}")
-        
-        if valid_images:
-            print(f"   Mode: Image-to-Image (refs: {', '.join(valid_images)})")
-            for image_file in valid_images:
-                image_base64 = encode_image_to_base64(image_file)
-                image_ext = Path(image_file).suffix.lower()
-                mime_type = "image/jpeg" if image_ext in [".jpg", ".jpeg"] else "image/png"
+                logger.warning(f"   Warning: Image file not found: {image_file}")
 
-                messages[0]["content"].append({
-                    "type": "image_url",
-                    "image_url": {
-                        "url": f"data:{mime_type};base64,{image_base64}"
-                    }
-                })
-        else:
-            print("   Warning: No valid reference images found")
-            print("   Falling back to text-to-image mode.")
+    if valid_images:
+        logger.info(f"   Mode: Image-to-Image (refs: {', '.join(valid_images)})")
+        for image_file in valid_images:
+            image_base64 = encode_image_to_base64(image_file)
+            image_ext = Path(image_file).suffix.lower()
+            mime_type = "image/jpeg" if image_ext in [".jpg", ".jpeg"] else "image/png"
+
+            messages[0]["content"].append({
+                "type": "image_url",
+                "image_url": {
+                    "url": f"data:{mime_type};base64,{image_base64}"
+                }
+            })
     else:
-        print("   Mode: Text-to-Image")
+        logger.info("   Mode: Text-to-Image")
 
-    print(f"   Model: {model}")
-    print(f"   API: {api_url}")
-    print(f"   Prompt preview: {prompt[:120]}...")
+    logger.info(f"   Model: {model}")
+    logger.info(f"   API: {api_url}")
+    logger.info(f"   Prompt preview: {prompt[:120]}...")
 
     payload = {
         "model": model,
@@ -258,10 +282,11 @@ def generate_image(prompt, api_url, api_key, model, image_files=None, output_pat
 
             image_url = extract_image_url_from_markdown(str(content))
             if image_url:
-                print(f"   Image URL: {image_url}")
+                logger.info(f"   Image URL: {image_url}")
                 if output_path:
+                    ensure_output_dir(output_path)
                     if download_image_from_url(image_url, output_path):
-                        print(f"\n   Saved: {output_path}")
+                        logger.info(f"\n   Saved: {output_path}")
                         return output_path
                 return image_url
 
@@ -273,26 +298,34 @@ def generate_image(prompt, api_url, api_key, model, image_files=None, output_pat
                             base64_data = img_url.split(",")[1]
                             image_data = base64.b64decode(base64_data)
                             if output_path:
+                                ensure_output_dir(output_path)
                                 with open(output_path, "wb") as f:
                                     f.write(image_data)
-                                print(f"\n   Saved: {output_path}")
+                                logger.info(f"\n   Saved: {output_path}")
                                 return output_path
 
-        print(f"\n   Failed: Cannot extract image from response")
+        logger.error(f"\n   Failed: Cannot extract image from response")
         return None
 
     except requests.exceptions.Timeout:
-        print("\n   Failed: API request timed out")
+        logger.error("\n   Failed: API request timed out")
         return None
     except requests.exceptions.RequestException as e:
-        print(f"\n   Failed: API request error - {e}")
+        logger.error(f"\n   Failed: API request error - {e}")
         return None
 
-def main():
+
+def parse_args() -> argparse.Namespace:
+    """
+    解析命令行参数
+
+    Returns:
+        解析后的参数对象
+    """
     parser = argparse.ArgumentParser(
         description=f"潮玩穿搭图生成工具 v{__version__}",
         formatter_class=argparse.RawDescriptionHelpFormatter,
-        epilog=f"""
+        epilog="""
 示例:
   python toy_outfit_generator.py --product "毛绒挂件" --output outfit.png
   python toy_outfit_generator.py --product "潮玩手办" --ref-image product.jpg --output street.png
@@ -316,62 +349,82 @@ def main():
     parser.add_argument("--count", type=int, default=1, help="生成图片数量（默认：1）")
     parser.add_argument("--seed", type=int, help="随机种子（用于复现结果）")
 
-    args = parser.parse_args()
+    return parser.parse_args()
 
-    print(f"潮玩穿搭图生成工具 v{__version__}")
-    print("=" * 50)
+
+def cleanup_temp_files(temp_files: List[str]) -> None:
+    """
+    清理临时文件
+
+    Args:
+        temp_files: 临时文件路径列表
+    """
+    logger.info("\n--- 清理临时文件 ---")
+    for temp_file in temp_files:
+        if os.path.exists(temp_file):
+            try:
+                os.remove(temp_file)
+                logger.info(f"   Cleaned up: {temp_file}")
+            except Exception as e:
+                logger.warning(f"   Warning: Failed to clean up {temp_file}: {e}")
+
+
+def main() -> None:
+    """主函数"""
+    args = parse_args()
+
+    logger.info(f"潮玩穿搭图生成工具 v{__version__}")
+    logger.info("=" * 50)
 
     api_key = args.api_key or os.environ.get("IMAGE_GEN_API_KEY")
     api_url = args.api_url or os.environ.get("IMAGE_GEN_API_URL", "https://api.1openapi.com/v1")
     model = args.model or os.environ.get("IMAGE_GEN_MODEL", "openai/gpt-image-2")
 
     if not api_key:
-        print("Error: API密钥必需")
-        print("请通过 --api-key 参数或设置 IMAGE_GEN_API_KEY 环境变量")
+        logger.error("Error: API密钥必需")
+        logger.error("请通过 --api-key 参数或设置 IMAGE_GEN_API_KEY 环境变量")
         sys.exit(1)
 
-    # 验证数量参数
     if args.count < 1:
-        print("Error: 生成数量必须大于0")
+        logger.error("Error: 生成数量必须大于0")
         sys.exit(1)
 
     ref_images = []
     temp_files = []
-    
+
     if args.ref_image:
         ref_images.extend(args.ref_image)
-    
+
     if args.ref_url:
         for idx, url in enumerate(args.ref_url):
             tmp_path = os.path.join(os.getcwd(), f"ref_{idx}.png")
-            if download_image_from_url(url, tmp_path):
-                ref_images.append(tmp_path)
-                temp_files.append(tmp_path)
-    
+            try:
+                if download_image_from_url(url, tmp_path):
+                    ref_images.append(tmp_path)
+                    temp_files.append(tmp_path)
+            except Exception as e:
+                logger.error(f"   Error downloading URL {url}: {e}")
+
     success_count = 0
 
-    # 生成多张图
     for i in range(args.count):
-        print(f"\n--- 生成第 {i+1}/{args.count} 张图 ---")
-        
-        # 计算当前的随机种子
+        logger.info(f"\n--- 生成第 {i+1}/{args.count} 张图 ---")
+
         current_seed = args.seed
         if current_seed is not None:
             current_seed = current_seed + i
-        
-        print("构建穿搭提示词...")
+
+        logger.info("构建穿搭提示词...")
         prompt, used_seed = build_prompt(args.product, args.desc, current_seed)
-        print(f"   使用随机种子: {used_seed}")
-        
-        # 确定输出文件名
+        logger.info(f"   使用随机种子: {used_seed}")
+
         if args.count == 1:
             output_path = args.output
         else:
-            # 如果是多张图，自动添加序号
             path_obj = Path(args.output)
             output_path = str(path_obj.parent / f"{path_obj.stem}_{i+1}{path_obj.suffix}")
-        
-        print("生成图片...")
+
+        logger.info("生成图片...")
         result = generate_image(
             prompt=prompt,
             api_url=api_url,
@@ -380,28 +433,17 @@ def main():
             image_files=ref_images if ref_images else None,
             output_path=output_path
         )
-        
+
         if result:
             success_count += 1
 
-    # 清理临时文件
-    print("\n--- 清理临时文件 ---")
-    for temp_file in temp_files:
-        if os.path.exists(temp_file):
-            try:
-                os.remove(temp_file)
-                print(f"   Cleaned up: {temp_file}")
-            except Exception as e:
-                print(f"   Warning: Failed to clean up {temp_file}: {e}")
+    cleanup_temp_files(temp_files)
 
-    # 输出结果统计
-    print(f"\n--- 完成 ---")
-    print(f"成功生成: {success_count}/{args.count} 张图")
+    logger.info(f"\n--- 完成 ---")
+    logger.info(f"成功生成: {success_count}/{args.count} 张图")
 
-    if success_count > 0:
-        sys.exit(0)
-    else:
-        sys.exit(1)
+    sys.exit(0 if success_count > 0 else 1)
+
 
 if __name__ == "__main__":
     main()
