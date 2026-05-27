@@ -107,12 +107,15 @@ python toy_outfit_generator.py --product "盲盒公仔" \
 |------|------|------|
 | `--product` | ✅ | 产品名称 |
 | `--desc` | ❌ | 产品描述 |
+| `--ratio` | ❌ | 图片比例（默认：3:4，支持 3:4, 1:1, 16:9 等） |
 | `--ref-image` | ❌ | 产品参考图路径（可多次使用） |
 | `--ref-url` | ❌ | 产品参考图URL（可多次使用） |
 | `--output` | ✅ | 输出文件路径 |
 | `--api-url` | ❌ | API地址（覆盖环境变量） |
 | `--api-key` | ❌ | API密钥（覆盖环境变量） |
 | `--model` | ❌ | 模型名称（覆盖环境变量） |
+| `--count` | ❌ | 生成图片数量（默认：1） |
+| `--seed` | ❌ | 随机种子（用于复现结果） |
 
 ## 摄影规范（禁止事项）
 
@@ -196,7 +199,7 @@ python toy_outfit_generator.py --product "盲盒公仔" \
 ## 示例
 
 ```bash
-# 生成穿搭图（文生图）
+# 生成穿搭图（文生图，默认3:4比例）
 python toy_outfit_generator.py --product "毛绒挂件" --output outfit.png
 
 # 生成穿搭图（图生图）
@@ -211,9 +214,21 @@ python toy_outfit_generator.py --product "盲盒公仔" \
 python toy_outfit_generator.py --product "疯兔怪" \
   --desc "萌牙怪兽毛绒挂件" \
   --ref-image product.jpg --output fashion_疯兔怪_001.png
+
+# 自定义图片比例（1:1正方形）
+python toy_outfit_generator.py --product "毛绒挂件" \
+  --ratio "1:1" --output square_outfit.png
+
+# 自定义图片比例（16:9横版）
+python toy_outfit_generator.py --product "潮玩手办" \
+  --ratio "16:9" --output wide_outfit.png
 ```
 
 ## 版本更新
+
+### v3.0.1 (2026-05-27)
+- **新增**：`--ratio` 参数，支持自定义图片比例（默认 3:4）
+- 支持常用比例：3:4、1:1、16:9 等
 
 ### v3.0.0 (2026-05-27)
 - **重大优化**：代码全面重构，提升可维护性和规范性

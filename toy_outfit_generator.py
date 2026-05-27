@@ -49,6 +49,7 @@ if "-h" in sys.argv or "--help" in sys.argv:
     )
     parser.add_argument("--product", required=True, help="产品名称")
     parser.add_argument("--desc", help="产品描述")
+    parser.add_argument("--ratio", default="3:4", help="图片比例（默认：3:4，支持如 3:4, 1:1, 16:9 等）")
     parser.add_argument("--ref-image", action="append", help="产品参考图路径（图生图模式，可多次使用）")
     parser.add_argument("--ref-url", action="append", help="产品参考图URL（自动下载，可多次使用）")
     parser.add_argument("--output", required=True, help="输出文件路径")
@@ -138,7 +139,7 @@ def ensure_output_dir(output_path: str) -> None:
         logger.info(f"   Created output directory: {output_dir}")
 
 
-def build_prompt(product_name: str, product_desc: str = "", random_seed: Optional[int] = None) -> Tuple[str, int]:
+def build_prompt(product_name: str, product_desc: str = "", random_seed: Optional[int] = None, ratio: str = "3:4") -> Tuple[str, int]:
     """
     构建潮玩穿搭提示词
 
@@ -146,6 +147,7 @@ def build_prompt(product_name: str, product_desc: str = "", random_seed: Optiona
         product_name: 产品名称
         product_desc: 产品描述
         random_seed: 随机种子
+        ratio: 图片比例（默认：3:4）
 
     Returns:
         (提示词文本, 使用的随机种子)
@@ -177,7 +179,7 @@ def build_prompt(product_name: str, product_desc: str = "", random_seed: Optiona
         ],
         "拍摄规范": [
             "俯拍", "仰拍", "人物太满", "人物太小", "过度后期", "不自然光线", "模糊不清",
-            "深景深", "背景过于清晰", "非3:4比例"
+            "深景深", "背景过于清晰", f"非{ratio}比例"
         ],
         "商业规范": [
             "价格信息", "促销信息"
@@ -340,6 +342,7 @@ def parse_args() -> argparse.Namespace:
 
     parser.add_argument("--product", required=True, help="产品名称")
     parser.add_argument("--desc", help="产品描述")
+    parser.add_argument("--ratio", default="3:4", help="图片比例（默认：3:4，支持如 3:4, 1:1, 16:9 等）")
     parser.add_argument("--ref-image", action="append", help="产品参考图路径（图生图模式，可多次使用）")
     parser.add_argument("--ref-url", action="append", help="产品参考图URL（自动下载，可多次使用）")
     parser.add_argument("--output", required=True, help="输出文件路径")
@@ -415,8 +418,9 @@ def main() -> None:
             current_seed = current_seed + i
 
         logger.info("构建穿搭提示词...")
-        prompt, used_seed = build_prompt(args.product, args.desc, current_seed)
+        prompt, used_seed = build_prompt(args.product, args.desc, current_seed, args.ratio)
         logger.info(f"   使用随机种子: {used_seed}")
+        logger.info(f"   图片比例: {args.ratio}")
 
         if args.count == 1:
             output_path = args.output
