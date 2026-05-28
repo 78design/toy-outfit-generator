@@ -4,7 +4,7 @@
 专为潮玩博主设计的通用穿搭图生成工具
 """
 
-__version__ = "3.0.0"
+__version__ = "3.1.0"
 
 import argparse
 import base64
