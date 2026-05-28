@@ -218,7 +218,7 @@ def generate_image(
 ) -> Optional[str]:
     """
     调用API生成图片
-
+    
     Args:
         prompt: 提示词
         api_url: API地址
@@ -226,7 +226,7 @@ def generate_image(
         model: 模型名称
         image_files: 参考图片文件列表
         output_path: 输出文件路径
-
+    
     Returns:
         保存的文件路径或图片URL，失败返回None
     """
@@ -234,11 +234,8 @@ def generate_image(
         api_url = api_url.rstrip("/") + "/chat/completions"
 
     headers = {
-        "Authorization": f"Bearer {api_key}",
-        "Content-Type": "application/json"
+        "Authorization": f"Bearer {api_key}"
     }
-
-    messages = [{"role": "user", "content": [{"type": "text", "text": prompt}]}]
 
     valid_images = []
     if image_files:
@@ -248,73 +245,216 @@ def generate_image(
             else:
                 logger.warning(f"   Warning: Image file not found: {image_file}")
 
+    # 优先尝试 multipart/form-data 方式（传递本地文件）
     if valid_images:
         logger.info(f"   Mode: Image-to-Image (refs: {', '.join(valid_images)})")
-        for image_file in valid_images:
+        try:
+            return generate_image_multipart(
+                prompt=prompt,
+                api_url=api_url,
+                api_key=api_key,
+                model=model,
+                image_files=valid_images,
+                output_path=output_path
+            )
+        except Exception as e:
+            logger.warning(f"   Multipart upload failed, trying base64 fallback: {e}")
+    
+    # 使用 base64 编码方式作为备选（兼容 text-to-image 和 image-to-image）
+    if valid_images:
+        logger.info(f"   Mode: Image-to-Image (base64 fallback)")
+    else:
+        logger.info(f"   Mode: Text-to-Image")
+    
+    return generate_image_base64(
+        prompt=prompt,
+        api_url=api_url,
+        api_key=api_key,
+        model=model,
+        image_files=valid_images,
+        output_path=output_path
+    )
+
+
+def generate_image_multipart(
+    prompt: str,
+    api_url: str,
+    api_key: str,
+    model: str,
+    image_files: List[str],
+    output_path: Optional[str] = None
+) -> Optional[str]:
+    """
+    使用 multipart/form-data 方式上传本地文件调用API（优先使用）
+    
+    Args:
+        prompt: 提示词
+        api_url: API地址
+        api_key: API密钥
+        model: 模型名称
+        image_files: 参考图片文件列表
+        output_path: 输出文件路径
+    
+    Returns:
+        保存的文件路径或图片URL，失败返回None
+    """
+    headers = {
+        "Authorization": f"Bearer {api_key}"
+    }
+    
+    files = []
+    for idx, image_file in enumerate(image_files):
+        image_ext = Path(image_file).suffix.lower()
+        mime_type = "image/jpeg" if image_ext in [".jpg", ".jpeg"] else "image/png"
+        files.append((f"image_{idx}", (os.path.basename(image_file), open(image_file, "rb"), mime_type)))
+    
+    payload = {
+        "model": model,
+        "prompt": prompt
+    }
+    
+    logger.info(f"   Model: {model}")
+    logger.info(f"   API: {api_url}")
+    logger.info(f"   Prompt preview: {prompt[:120]}...")
+    
+    try:
+        response = requests.post(
+            api_url,
+            headers=headers,
+            data=payload,
+            files=files,
+            timeout=120
+        )
+        response.raise_for_status()
+        result = response.json()
+        return handle_image_response(result, output_path)
+    finally:
+        # 关闭打开的文件
+        for _, (_, file_obj, _) in files:
+            file_obj.close()
+
+
+def generate_image_base64(
+    prompt: str,
+    api_url: str,
+    api_key: str,
+    model: str,
+    image_files: List[str],
+    output_path: Optional[str] = None
+) -> Optional[str]:
+    """
+    使用 base64 编码方式调用API（备选方案）
+    
+    Args:
+        prompt: 提示词
+        api_url: API地址
+        api_key: API密钥
+        model: 模型名称
+        image_files: 参考图片文件列表
+        output_path: 输出文件路径
+    
+    Returns:
+        保存的文件路径或图片URL，失败返回None
+    """
+    headers = {
+        "Authorization": f"Bearer {api_key}",
+        "Content-Type": "application/json"
+    }
+    
+    messages = [{"role": "user", "content": [{"type": "text", "text": prompt}]}]
+    
+    if image_files:
+        for image_file in image_files:
             image_base64 = encode_image_to_base64(image_file)
             image_ext = Path(image_file).suffix.lower()
             mime_type = "image/jpeg" if image_ext in [".jpg", ".jpeg"] else "image/png"
-
+            
             messages[0]["content"].append({
                 "type": "image_url",
                 "image_url": {
                     "url": f"data:{mime_type};base64,{image_base64}"
                 }
             })
-    else:
-        logger.info("   Mode: Text-to-Image")
-
+    
     logger.info(f"   Model: {model}")
     logger.info(f"   API: {api_url}")
     logger.info(f"   Prompt preview: {prompt[:120]}...")
-
+    
     payload = {
         "model": model,
         "messages": messages
     }
-
+    
     try:
         response = requests.post(api_url, headers=headers, json=payload, timeout=120)
         response.raise_for_status()
         result = response.json()
+        return handle_image_response(result, output_path)
+    except Exception as e:
+        logger.error(f"   Failed: API request error - {e}")
+        return None
 
-        if "choices" in result and len(result["choices"]) > 0:
-            message = result["choices"][0].get("message", {})
-            content = message.get("content", "")
 
-            image_url = extract_image_url_from_markdown(str(content))
-            if image_url:
-                logger.info(f"   Image URL: {image_url}")
-                if output_path:
-                    ensure_output_dir(output_path)
-                    if download_image_from_url(image_url, output_path):
-                        logger.info(f"\n   Saved: {output_path}")
-                        return output_path
-                return image_url
-
-            if isinstance(content, list):
-                for item in content:
-                    if isinstance(item, dict) and item.get("type") == "image_url":
-                        img_url = item.get("image_url", {}).get("url", "")
-                        if img_url.startswith("data:image"):
-                            base64_data = img_url.split(",")[1]
-                            image_data = base64.b64decode(base64_data)
-                            if output_path:
-                                ensure_output_dir(output_path)
-                                with open(output_path, "wb") as f:
-                                    f.write(image_data)
+def handle_image_response(result: dict, output_path: Optional[str]) -> Optional[str]:
+    """
+    处理API响应并保存图片
+    
+    Args:
+        result: API响应结果
+        output_path: 输出文件路径
+    
+    Returns:
+        保存的文件路径或图片URL，失败返回None
+    """
+    if "choices" in result and len(result["choices"]) > 0:
+        message = result["choices"][0].get("message", {})
+        content = message.get("content", "")
+        
+        image_url = extract_image_url_from_markdown(str(content))
+        if image_url:
+            logger.info(f"   Image URL: {image_url}")
+            if output_path:
+                ensure_output_dir(output_path)
+                if download_image_from_url(image_url, output_path):
+                    logger.info(f"\n   Saved: {output_path}")
+                    return output_path
+            return image_url
+        
+        if isinstance(content, list):
+            for item in content:
+                if isinstance(item, dict) and item.get("type") == "image_url":
+                    img_url = item.get("image_url", {}).get("url", "")
+                    if img_url.startswith("data:image"):
+                        base64_data = img_url.split(",")[1]
+                        image_data = base64.b64decode(base64_data)
+                        if output_path:
+                            ensure_output_dir(output_path)
+                            with open(output_path, "wb") as f:
+                                f.write(image_data)
+                            logger.info(f"\n   Saved: {output_path}")
+                            return output_path
+                    elif img_url.startswith("http"):
+                        logger.info(f"   Image URL: {img_url}")
+                        if output_path:
+                            ensure_output_dir(output_path)
+                            if download_image_from_url(img_url, output_path):
                                 logger.info(f"\n   Saved: {output_path}")
                                 return output_path
-
-        logger.error(f"\n   Failed: Cannot extract image from response")
-        return None
-
-    except requests.exceptions.Timeout:
-        logger.error("\n   Failed: API request timed out")
-        return None
-    except requests.exceptions.RequestException as e:
-        logger.error(f"\n   Failed: API request error - {e}")
-        return None
+                        return img_url
+        
+        # 尝试直接从 images 字段获取
+        if "images" in result and len(result["images"]) > 0:
+            img_url = result["images"][0]
+            logger.info(f"   Image URL: {img_url}")
+            if output_path:
+                ensure_output_dir(output_path)
+                if download_image_from_url(img_url, output_path):
+                    logger.info(f"\n   Saved: {output_path}")
+                    return output_path
+            return img_url
+    
+    logger.error(f"\n   Failed: Cannot extract image from response")
+    return None
 
 
 def parse_args() -> argparse.Namespace:
