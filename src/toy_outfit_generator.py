@@ -406,6 +406,35 @@ def handle_image_response(result: dict, output_path: Optional[str]) -> Optional[
     Returns:
         保存的文件路径或图片URL，失败返回None
     """
+    # 检查是否有 messages 字段（有些 API 会把结果放在这里）
+    if "messages" in result and len(result["messages"]) > 0:
+        for msg in result["messages"]:
+            if "content" in msg:
+                content = msg["content"]
+                if isinstance(content, list):
+                    for item in content:
+                        if isinstance(item, dict) and item.get("type") == "image_url":
+                            img_url = item.get("image_url", {}).get("url", "")
+                            if img_url.startswith("data:image"):
+                                base64_data = img_url.split(",")[1]
+                                image_data = base64.b64decode(base64_data)
+                                if output_path:
+                                    ensure_output_dir(output_path)
+                                    with open(output_path, "wb") as f:
+                                        f.write(image_data)
+                                    logger.info(f"\n   Saved: {output_path}")
+                                    return output_path
+                            elif img_url.startswith("http"):
+                                logger.info(f"   Image URL: {img_url}")
+                                if output_path:
+                                    ensure_output_dir(output_path)
+                                    if download_image_from_url(img_url, output_path):
+                                        logger.info(f"\n   Saved: {output_path}")
+                                        return output_path
+                                return img_url
+
+    # 调试：打印完整的响应（如果需要的话）
+    # logger.info(f"   Debug API response: {result}")
     if "choices" in result and len(result["choices"]) > 0:
         message = result["choices"][0].get("message", {})
         content = message.get("content", "")
