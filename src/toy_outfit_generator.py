@@ -245,28 +245,14 @@ def generate_image(
             else:
                 logger.warning(f"   Warning: Image file not found: {image_file}")
 
-    # 优先尝试 multipart/form-data 方式（传递本地文件）
+    # 使用 OpenAI 标准兼容的 base64 编码方式
+    # 注意：1openapi 等 OpenAI 兼容 API 只支持 JSON + base64 格式，不支持 multipart/form-data
     if valid_images:
         logger.info(f"   Mode: Image-to-Image (refs: {', '.join(valid_images)})")
-        logger.info(f"   Trying multipart/form-data upload first...")
-        try:
-            return generate_image_multipart(
-                prompt=prompt,
-                api_url=api_url,
-                api_key=api_key,
-                model=model,
-                image_files=valid_images,
-                output_path=output_path
-            )
-        except Exception as e:
-            logger.warning(f"   Multipart upload failed: {str(e)}")
-            logger.info(f"   Falling back to base64 encoding...")
-
-    # 使用 base64 编码方式作为备选（兼容 text-to-image 和 image-to-image）
-    if valid_images:
-        logger.info(f"   Mode: Image-to-Image (base64 fallback)")
+        logger.info(f"   Format: OpenAI compatible (base64 encoding)")
     else:
         logger.info(f"   Mode: Text-to-Image")
+        logger.info(f"   Format: OpenAI compatible")
 
     return generate_image_base64(
         prompt=prompt,
