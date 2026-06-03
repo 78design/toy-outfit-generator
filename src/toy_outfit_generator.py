@@ -245,24 +245,9 @@ def generate_image(
             else:
                 logger.warning(f"   Warning: Image file not found: {image_file}")
 
-    # 优先尝试 multipart/form-data 方式（传递本地文件）
+    # 使用 base64 编码方式（OpenAI 标准兼容，兼容性最好）
     if valid_images:
         logger.info(f"   Mode: Image-to-Image (refs: {', '.join(valid_images)})")
-        try:
-            return generate_image_multipart(
-                prompt=prompt,
-                api_url=api_url,
-                api_key=api_key,
-                model=model,
-                image_files=valid_images,
-                output_path=output_path
-            )
-        except Exception as e:
-            logger.warning(f"   Multipart upload failed, trying base64 fallback: {e}")
-    
-    # 使用 base64 编码方式作为备选（兼容 text-to-image 和 image-to-image）
-    if valid_images:
-        logger.info(f"   Mode: Image-to-Image (base64 fallback)")
     else:
         logger.info(f"   Mode: Text-to-Image")
     
@@ -303,21 +288,21 @@ def generate_image_multipart(
     }
     
     files = []
-    for idx, image_file in enumerate(image_files):
-        image_ext = Path(image_file).suffix.lower()
-        mime_type = "image/jpeg" if image_ext in [".jpg", ".jpeg"] else "image/png"
-        files.append((f"image_{idx}", (os.path.basename(image_file), open(image_file, "rb"), mime_type)))
-    
-    payload = {
-        "model": model,
-        "prompt": prompt
-    }
-    
-    logger.info(f"   Model: {model}")
-    logger.info(f"   API: {api_url}")
-    logger.info(f"   Prompt preview: {prompt[:120]}...")
-    
     try:
+        for idx, image_file in enumerate(image_files):
+            image_ext = Path(image_file).suffix.lower()
+            mime_type = "image/jpeg" if image_ext in [".jpg", ".jpeg"] else "image/png"
+            files.append((f"image_{idx}", (os.path.basename(image_file), open(image_file, "rb"), mime_type)))
+        
+        payload = {
+            "model": model,
+            "prompt": prompt
+        }
+        
+        logger.info(f"   Model: {model}")
+        logger.info(f"   API: {api_url}")
+        logger.info(f"   Prompt preview: {prompt[:120]}...")
+        
         response = requests.post(
             api_url,
             headers=headers,
@@ -325,6 +310,16 @@ def generate_image_multipart(
             files=files,
             timeout=120
         )
+        
+        # 记录详细的错误信息
+        if response.status_code != 200:
+            logger.error(f"   API Error Status: {response.status_code}")
+            try:
+                error_json = response.json()
+                logger.error(f"   API Error Response: {error_json}")
+            except:
+                logger.error(f"   API Error Response Text: {response.text}")
+        
         response.raise_for_status()
         result = response.json()
         return handle_image_response(result, output_path)
