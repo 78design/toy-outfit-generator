@@ -245,12 +245,29 @@ def generate_image(
             else:
                 logger.warning(f"   Warning: Image file not found: {image_file}")
 
-    # 使用 base64 编码方式（OpenAI 标准兼容，兼容性最好）
+    # 优先尝试 multipart/form-data 方式（传递本地文件）
     if valid_images:
         logger.info(f"   Mode: Image-to-Image (refs: {', '.join(valid_images)})")
+        logger.info(f"   Trying multipart/form-data upload first...")
+        try:
+            return generate_image_multipart(
+                prompt=prompt,
+                api_url=api_url,
+                api_key=api_key,
+                model=model,
+                image_files=valid_images,
+                output_path=output_path
+            )
+        except Exception as e:
+            logger.warning(f"   Multipart upload failed: {str(e)}")
+            logger.info(f"   Falling back to base64 encoding...")
+
+    # 使用 base64 编码方式作为备选（兼容 text-to-image 和 image-to-image）
+    if valid_images:
+        logger.info(f"   Mode: Image-to-Image (base64 fallback)")
     else:
         logger.info(f"   Mode: Text-to-Image")
-    
+
     return generate_image_base64(
         prompt=prompt,
         api_url=api_url,
@@ -294,7 +311,9 @@ def generate_image_multipart(
             mime_type = "image/jpeg" if image_ext in [".jpg", ".jpeg"] else "image/png"
             files.append((f"image_{idx}", (os.path.basename(image_file), open(image_file, "rb"), mime_type)))
         
-        payload = {
+        # 尝试两种可能的payload格式 - 第一种：直接传prompt和model，第二种：传完整的messages结构
+        # 先尝试第一种格式
+        payload_v1 = {
             "model": model,
             "prompt": prompt
         }
@@ -302,27 +321,37 @@ def generate_image_multipart(
         logger.info(f"   Model: {model}")
         logger.info(f"   API: {api_url}")
         logger.info(f"   Prompt preview: {prompt[:120]}...")
+        logger.info(f"   Attempting multipart upload (format 1: prompt + model)...")
         
         response = requests.post(
             api_url,
             headers=headers,
-            data=payload,
+            data=payload_v1,
             files=files,
             timeout=120
         )
         
-        # 记录详细的错误信息
-        if response.status_code != 200:
+        # 记录详细的响应信息
+        logger.info(f"   Response status: {response.status_code}")
+        
+        if response.status_code == 200:
+            try:
+                result = response.json()
+                logger.info(f"   Success! Processing response...")
+                return handle_image_response(result, output_path)
+            except Exception as e:
+                logger.error(f"   Failed to parse success response: {e}")
+        else:
             logger.error(f"   API Error Status: {response.status_code}")
             try:
                 error_json = response.json()
                 logger.error(f"   API Error Response: {error_json}")
-            except:
+            except Exception:
                 logger.error(f"   API Error Response Text: {response.text}")
         
-        response.raise_for_status()
-        result = response.json()
-        return handle_image_response(result, output_path)
+        # 如果第一种格式失败，不抛出异常，让外层的异常处理来捕获，然后fallback到base64
+        raise Exception(f"Multipart request failed with status {response.status_code}")
+        
     finally:
         # 关闭打开的文件
         for _, (_, file_obj, _) in files:
