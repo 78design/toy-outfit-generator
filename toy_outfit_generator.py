@@ -107,28 +107,20 @@ def build_prompt(product_name: str, product_desc: str = "", random_seed: Optiona
     if random_seed is None:
         random_seed = int(time.time() * 1000000) % 100000000
 
-    style_variations = [
-        "时尚潮流风格",
-        "街头潮流风格",
-        "都市休闲风格",
-        "个性混搭风格",
-        "轻复古风格",
-        "简约高级风格",
-        "创意混搭风格",
-        "艺术感穿搭风格"
-    ]
-
-    selected_style = random.choice(style_variations)
-
     prompt_parts = [
         f"（随机种子: {random_seed}）",
         "",
         "主体：",
         "- 一位时尚的年轻女性穿搭博主",
         "- 自然、自信的姿态",
-        "- 展现个人风格与态度",
+        "- 展现个人独特的穿搭风格与态度",
         "",
-        f"风格：{selected_style}",
+        "整体感觉：",
+        "- 适合社交分享的穿搭展示",
+        "- 有品味，不随波逐流",
+        "- 避免过于正式或商务的氛围",
+        "- 避免过于幼稚或甜美的感觉",
+        "- 避免居家或运动感过重",
         "",
         "产品展示：",
         f"- 身上佩戴或手持{product_name}",
