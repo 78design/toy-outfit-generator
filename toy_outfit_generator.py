@@ -61,9 +61,10 @@ if "-h" in sys.argv or "--help" in sys.argv:
 
 try:
     import requests
+    from requests_toolbelt import MultipartEncoder
 except ImportError:
-    logger.error("Error: requests library not installed.")
-    logger.error("Run: pip install requests")
+    logger.error("Error: requests or requests_toolbelt library not installed.")
+    logger.error("Run: pip install requests requests_toolbelt")
     sys.exit(1)
 
 
@@ -101,6 +102,77 @@ def ensure_output_dir(output_path: str) -> None:
     if not output_dir.exists():
         output_dir.mkdir(parents=True, exist_ok=True)
         logger.info(f"   Created output directory: {output_dir}")
+
+
+def generate_image_multipart(
+    prompt: str,
+    api_url: str,
+    api_key: str,
+    model: str,
+    image_files: List[str],
+    output_path: Optional[str] = None
+) -> Optional[str]:
+    if not api_url.endswith("/chat/completions"):
+        api_url = api_url.rstrip("/") + "/chat/completions"
+
+    try:
+        import json
+        messages = [
+            {
+                "role": "user",
+                "content": [
+                    {"type": "text", "text": prompt},
+                    {"type": "image_url", "image_url": {"url": "data:image/png;base64,<IMAGE_PLACEHOLDER>"}}
+                ]
+            }
+        ]
+        
+        m = MultipartEncoder(
+            fields={
+                'model': model,
+                'messages': json.dumps(messages),
+                'file': ('image.png', open(image_files[0], 'rb'), 'image/png')
+            }
+        )
+
+        headers = {
+            "Authorization": f"Bearer {api_key}",
+            "Content-Type": m.content_type
+        }
+
+        logger.info(f"   Sending multipart request to {api_url}...")
+        response = requests.post(api_url, headers=headers, data=m, timeout=180)
+        logger.info(f"   Response status: {response.status_code}")
+
+        if response.status_code == 200:
+            result = response.json()
+            if "choices" in result and len(result["choices"]) > 0:
+                message = result["choices"][0].get("message", {})
+                if isinstance(message, dict):
+                    content = message.get("content", "")
+                else:
+                    content = str(message)
+                
+                if content:
+                    image_url = extract_image_url_from_markdown(content)
+                    if image_url:
+                        logger.info(f"   Generated image URL: {image_url}")
+                        if output_path:
+                            ensure_output_dir(output_path)
+                            download_image_from_url(image_url, output_path)
+                            logger.info(f"   Image saved to: {output_path}")
+                            return output_path
+                        return image_url
+            else:
+                logger.error(f"   Unexpected response structure")
+        else:
+            logger.error(f"   API Error Response Text: {response.text}")
+            raise Exception(f"API returned {response.status_code}")
+    except Exception as e:
+        logger.error(f"   Multipart upload failed: {str(e)}")
+        raise
+
+    return None
 
 
 def build_prompt(product_name: str, product_desc: str = "", random_seed: Optional[int] = None, ratio: str = "3:4") -> Tuple[str, int]:
@@ -164,10 +236,23 @@ def generate_image(
 
     if valid_images:
         logger.info(f"   Mode: Image-to-Image (refs: {', '.join(valid_images)})")
-        logger.info(f"   Format: OpenAI compatible (base64 encoding)")
+        logger.info(f"   Trying multipart upload first...")
+        try:
+            return generate_image_multipart(
+                prompt=prompt,
+                api_url=api_url,
+                api_key=api_key,
+                model=model,
+                image_files=valid_images,
+                output_path=output_path
+            )
+        except Exception as e:
+            logger.warning(f"   Multipart upload failed: {str(e)}")
+            logger.info(f"   Falling back to base64 encoding...")
     else:
         logger.info(f"   Mode: Text-to-Image")
-        logger.info(f"   Format: OpenAI compatible")
+
+    logger.info(f"   Format: OpenAI compatible (base64 encoding)")
 
     messages = []
     content_parts = [{
