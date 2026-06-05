@@ -112,6 +112,7 @@ def build_prompt(product_name: str, product_desc: str = "", random_seed: Optiona
         "",
         "主体：",
         "- 一位时尚的年轻女性穿搭博主",
+        "- 九头身的完美身材比例",
         "- 自然、自信的姿态",
         "- 展现个人独特的穿搭风格与态度",
         "",
