@@ -2,135 +2,276 @@
 
 专为潮玩博主设计的通用穿搭图生成工具，支持文生图和图生图模式，采用反向规范控制（只说明禁止事项，不指定明确风格）。
 
-![Version](https://img.shields.io/badge/version-3.1.0-blue)
-![License](https://img.shields.io/badge/license-MIT-green)
-![Python](https://img.shields.io/badge/python-3.8%2B-yellow)
+## 🚀 安装方式（四种方式任选其一）
 
-## ✨ 核心功能
+### 方式一：下载安装包（推荐！离线可用）
 
-- **文生图模式**：根据产品描述生成穿搭图
-- **图生图模式**：支持本地图片和远程URL参考
-- **反向规范控制**：只说明禁止事项，不限制具体风格
-- **自定义比例**：支持3:4、1:1、16:9等常用比例
-- **批量生成**：支持一次生成多张图
-- **随机种子**：支持指定随机种子复现结果
+直接下载压缩包，解压后一键安装：
 
-## 🚀 快速开始
+```bash
+# 下载最新版本安装包
+wget https://github.com/78design/toy-outfit-generator/releases/latest/download/toy-outfit-generator-3.0.0.zip
 
-### 前置要求
+# 解压并安装
+unzip toy-outfit-generator-3.0.0.zip
+cd toy-outfit-generator-3.0.0
+chmod +x install.sh
+./install.sh
+```
 
-- Python 3.8+
-- pip
+### 方式二：在线一键安装
 
-### 安装
+使用 curl 一键安装：
 
-查看详细安装说明：[INSTALL.md](INSTALL.md)
+```bash
+curl -fsSL https://raw.githubusercontent.com/78design/toy-outfit-generator/main/install.sh | bash
+```
 
-最简单的方式：
+或者使用 wget：
+
+```bash
+bash -c "$(wget -O- https://raw.githubusercontent.com/78design/toy-outfit-generator/main/install.sh)"
+```
+
+### 方式三：标准技能安装命令
+
 ```bash
 npx skills add 78design/toy-outfit-generator
 ```
 
-### 配置
+或者使用完整 GitHub URL：
 
-设置API密钥：
+```bash
+npx skills add https://github.com/78design/toy-outfit-generator
+```
+
+### 方式四：手动安装
+
+克隆仓库后手动安装依赖：
+
+```bash
+git clone https://github.com/78design/toy-outfit-generator.git
+cd toy-outfit-generator
+pip install -r requirements.txt
+```
+
+---
+
+## 核心特点
+
+- **通用设计**：适用于各类潮玩产品（毛绒挂件、手办、盲盒、零钱包等）
+- **灵活输入**：支持本地图片和远程URL两种参考图模式
+- **反向规范控制**：只说明禁止事项，不限制具体风格、色彩，让AI有更大发挥空间
+- **产品一致性**：支持参考图模式，保持产品特征一致
+
+## 快速开始
+
+### 1. 安装依赖（如果不使用一键安装）
+
+```bash
+pip install -r requirements.txt
+```
+
+### 2. 配置API
+
+设置环境变量：
+
 ```bash
 export IMAGE_GEN_API_KEY="your-api-key"
+export IMAGE_GEN_API_URL="https://api.1openapi.com/v1"
+export IMAGE_GEN_MODEL="openai/gpt-image-2"
 ```
 
-或使用配置文件：
+### 3. 生成穿搭图
+
+**文生图模式：**
 ```bash
-cp .env.example .env
-# 编辑 .env 文件
+python toy_outfit_generator.py --product "毛绒挂件" --output outfit.png
 ```
 
-### 运行
+**图生图模式（本地图片）：**
+```bash
+python toy_outfit_generator.py --product "潮玩手办" \
+  --ref-image product.jpg --output street.png
+```
+
+**图生图模式（远程URL）：**
+```bash
+python toy_outfit_generator.py --product "盲盒公仔" \
+  --ref-url "https://example.com/product.jpg" --output product.png
+```
+
+## 命令参数
+
+| 参数 | 必需 | 说明 |
+|------|------|------|
+| `--product` | ✅ | 产品名称 |
+| `--desc` | ❌ | 产品描述 |
+| `--ratio` | ❌ | 图片比例（默认：3:4，支持 3:4, 1:1, 16:9 等） |
+| `--ref-image` | ❌ | 产品参考图路径（可多次使用） |
+| `--ref-url` | ❌ | 产品参考图URL（可多次使用） |
+| `--output` | ✅ | 输出文件路径 |
+| `--api-url` | ❌ | API地址（覆盖环境变量） |
+| `--api-key` | ❌ | API密钥（覆盖环境变量） |
+| `--model` | ❌ | 模型名称（覆盖环境变量） |
+| `--count` | ❌ | 生成图片数量（默认：1） |
+| `--seed` | ❌ | 随机种子（用于复现结果） |
+
+## 摄影规范（禁止事项）
+
+### 人物规范（禁止事项）
+- ❌ 不要出现未成年感，年龄<18岁
+- ❌ 不要出现成熟感，年龄>30岁
+- ❌ 不要出现男性特征
+- ❌ 不要身材臃肿，比例失调
+- ❌ 不要平板身材，无曲线感
+- ❌ 不要胸部平坦，无挺拔感
+- ❌ 不要非九头身比例
+- ❌ 不要夸张妆容
+- ❌ 不要不自然表情
+- ❌ 不要僵硬、呆板的站姿
+- ❌ 不要游客照式的摆拍动作
+- ❌ 不要双手自然下垂的僵硬姿势
+- ❌ 不要表情空洞，眼神呆滞
+- ❌ 不要身体紧绷，不自然
+
+### 穿搭规范（禁止事项）
+- ❌ 不要出现过于正式的服装（西装、礼服等）
+- ❌ 不要出现暴露服装
+- ❌ 不要出现复杂图案抢镜
+- ❌ 不要出现大面积亮色
+- ❌ 不要出现品牌logo明显
+- ❌ 不要出现工装裤
+- ❌ 不要出现短款背心、crop tops
+- ❌ 不要出现基础款白T恤+牛仔裤的平庸穿搭
+- ❌ 不要出现平庸穿搭
+- ❌ 不要出现路人感、居家感
+- ❌ 不要出现甜美少女风、可爱风
+
+### 产品展示（禁止事项）
+- ❌ 不要让产品过于隐蔽看不清
+- ❌ 不要让其他元素抢产品的风头
+- ❌ 不要改变产品颜色、款式、材质
+- ❌ 不要产品模糊
+- ❌ 不要产品被遮挡
+- ❌ 不要毛绒挂件悬浮
+- ❌ 不要挂件漂浮
+- ❌ 不要挂件悬空
+- ❌ 不要挂件未挂在包上
+- ❌ 不要挂件穿模
+- ❌ 不要挂件位置错乱
+- ❌ 不要挂件脱离包体
+- ❌ 不要挂件无挂扣连接
+- ❌ 不要挂件浮空
+- ❌ 不要不合理悬挂
+- ❌ 不要错位
+- ❌ 不要漂浮物体
+- ❌ 不要悬空物体
+- ❌ 不要穿帮
+
+### 场景规范（禁止事项）
+- ❌ 不要出现过于杂乱的背景
+- ❌ 不要出现其他人物抢镜
+- ❌ 不要出现品牌logo明显
+- ❌ 不要出现不雅场景
+
+### 拍摄规范（禁止事项）
+- ❌ 不要俯拍或仰拍，只允许平拍
+- ❌ 不要人物太满（脑袋和脚顶到画面边缘）
+- ❌ 不要人物太小看不清穿搭
+- ❌ 不要出现过度后期效果
+- ❌ 不要出现不自然光线
+- ❌ 不要出现模糊不清
+- ❌ 不要出现全景清晰（深景深）
+- ❌ 不要出现背景过于清晰抢镜
+- ❌ 不要出现非3:4比例
+- ❌ 不要让人物太满，脑袋和脚顶到画面边缘
+
+### 商业规范（禁止事项）
+- ❌ 不要出现价格信息
+- ❌ 不要出现促销信息
+
+### 核心要求
+- 产品挂在包包上、拿在手里、放在口袋旁都可以
+- 产品要清晰可见
+- 人是穿搭的核心！
+
+## 示例
 
 ```bash
-# 文生图
-toy-outfit --product "毛绒挂件" --output outfit.png
+# 生成穿搭图（文生图，默认3:4比例）
+python toy_outfit_generator.py --product "毛绒挂件" --output outfit.png
 
-# 图生图
-toy-outfit --product "潮玩手办" --ref-image product.jpg --output street.png
+# 生成穿搭图（图生图）
+python toy_outfit_generator.py --product "潮玩手办" \
+  --ref-image product.jpg --output street_style.png
 
-# 自定义比例
-toy-outfit --product "毛绒挂件" --ratio "1:1" --output square.png
+# 使用远程URL作为参考图
+python toy_outfit_generator.py --product "盲盒公仔" \
+  --ref-url "https://example.com/product.jpg" --output product.png
+
+# 带产品描述
+python toy_outfit_generator.py --product "疯兔怪" \
+  --desc "萌牙怪兽毛绒挂件" \
+  --ref-image product.jpg --output fashion_疯兔怪_001.png
+
+# 自定义图片比例（1:1正方形）
+python toy_outfit_generator.py --product "毛绒挂件" \
+  --ratio "1:1" --output square_outfit.png
+
+# 自定义图片比例（16:9横版）
+python toy_outfit_generator.py --product "潮玩手办" \
+  --ratio "16:9" --output wide_outfit.png
 ```
 
-## 📖 完整文档
+## 版本更新
 
-- [SKILL.md](SKILL.md) - 技能完整说明
-- [INSTALL.md](INSTALL.md) - 详细安装说明
-- [examples/](examples/) - 使用示例
-
-## 📝 命令参数
-
-| 参数 | 类型 | 必填 | 默认值 | 说明 |
-|------|------|------|--------|------|
-| `--product` | str | ✅ | - | 产品名称 |
-| `--desc` | str | ❌ | - | 产品描述 |
-| `--ratio` | str | ❌ | 3:4 | 图片比例（3:4、1:1、16:9等） |
-| `--ref-image` | list | ❌ | - | 产品参考图路径（可多次使用） |
-| `--ref-url` | list | ❌ | - | 产品参考图URL（可多次使用） |
-| `--output` | str | ✅ | - | 输出文件路径 |
-| `--api-url` | str | ❌ | 环境变量 | API地址（覆盖环境变量） |
-| `--api-key` | str | ❌ | 环境变量 | API密钥（覆盖环境变量） |
-| `--model` | str | ❌ | 环境变量 | 模型名称（覆盖环境变量） |
-| `--count` | int | ❌ | 1 | 生成图片数量 |
-| `--seed` | int | ❌ | - | 随机种子（用于复现结果） |
-| `-h, --help` | - | ❌ | - | 显示帮助信息 |
-| `-v, --version` | - | ❌ | - | 显示版本信息 |
-
-## 🔄 版本更新
-
-### v3.1.0 (2026-05-28)
-- **新增**：`--ratio` 参数支持自定义图片比例
-- **优化**：重构图生图模块，优先使用multipart/form-data上传
-- **优化**：完善项目结构，符合标准技能规范
-- **新增**：自动化GitHub Actions发布工作流
-- **优化**：提供多种安装方式（压缩包、在线、技能安装）
+### v3.0.1 (2026-05-27)
+- **新增**：`--ratio` 参数，支持自定义图片比例（默认 3:4）
+- 支持常用比例：3:4、1:1、16:9 等
 
 ### v3.0.0 (2026-05-27)
 - **重大优化**：代码全面重构，提升可维护性和规范性
-- **新增**：完整的类型提示（Type Hints）
-- **新增**：标准化的Google风格文档字符串
-- **新增**：专业的日志系统
-- **新增**：自动创建输出目录功能
+- **新增**：完整的类型提示（Type Hints），提升代码质量
+- **新增**：标准化的 Google 风格文档字符串（docstring）
+- **新增**：专业的日志系统，使用 logging 模块替代 print
+- **新增**：自动创建输出目录功能（ensure_output_dir）
+- **新增**：GitHub Actions 自动化工作流，自动生成安装包
+- **优化**：消除重复代码，提取公共函数
+- **优化**：异常处理更完善，临时文件下载增加保护
+- **提供四种安装方式**：压缩包、在线安装、技能安装、手动安装
 
 ### v2.3.0 (2026-05-26)
 - **重要优化**：解决了生成多张图返回相同图片的问题
 - **新增**：`--count` 参数支持一次生成多张图
 - **新增**：`--seed` 参数支持指定随机种子复现结果
+- **优化**：在提示词中添加随机种子确保每次生成的图片都不同
+- **优化**：多张图自动添加序号命名（如 outfit_1.png, outfit_2.png）
 
-完整更新日志：详见 [CHANGELOG.md](CHANGELOG.md)（或SKILL.md）
+### v2.2.0 (2026-05-24)
+- **新增**：在代码中添加 `__version__` 常量
+- **新增**：`--version` 和 `-v` 选项查看版本
+- **优化**：运行时显示版本号
 
-## 📁 项目结构
+### v2.1.0 (2026-05-24)
+- **优化**：修复临时文件清理问题
+- **优化**：移除未使用的 import
+- **新增**：`npx skills add` 标准技能安装命令
 
-```
-toy-outfit-generator/
-├── SKILL.md                # 技能说明
-├── README.md              # 项目说明（本文件）
-├── INSTALL.md             # 安装说明
-├── pyproject.toml         # Python项目配置
-├── requirements.txt       # 依赖列表
-├── install.sh            # 本地安装脚本
-├── install-online.sh      # 在线安装脚本
-├── .env.example          # 环境变量配置示例
-├── .gitignore            # Git忽略配置
-├── src/                  # 源代码目录
-│   ├── __init__.py
-│   └── toy_outfit_generator.py  # 主程序
-├── docs/                 # 文档目录
-├── examples/             # 示例目录
-└── .github/              # GitHub相关配置
-    └── workflows/
-        └── release.yml    # 自动化发布工作流
-```
+### v2.0.3 (2026-05-23)
+- **格式标准化**：按照标准技能格式整理项目结构
+- 新增 `install.sh` 本地安装脚本
+- 新增 `.env.example` 配置文件示例
+- 新增 `INSTALL.md` 专门的安装说明文档
+- 更新在线安装脚本配合标准格式
 
-## 🤝 贡献
+### v2.0.0 (2026-05-22)
+- **重大更新**：规范系统重构为反向规范模式
+- 只说明禁止事项，不限制具体风格、色彩
+- 移除了style/color/scene参数
+- 新增更详细的产品展示禁止规范
+- 保持核心功能不变
 
-欢迎提交Issue和Pull Request！
-
-## 📄 许可证
+## 许可证
 
 MIT License
