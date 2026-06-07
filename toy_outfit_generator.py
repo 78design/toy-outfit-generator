@@ -103,19 +103,27 @@ def ensure_output_dir(output_path: str) -> None:
         logger.info(f"   Created output directory: {output_dir}")
 
 
-# 当 --count > 1 时，自动轮换使用不同的场景背景描述，确保每张图不同
-SCENE_VARIATIONS = [
-    "都市街景，时尚街头氛围，自然光线",
-    "简约咖啡店内，温暖灯光，慵懒氛围",
-    "艺术画廊展厅，现代感白墙背景",
-    "城市天台，开阔视野，蓝天背景",
-    "创意工作室，文艺氛围，柔和光线",
-    "傍晚街角，暖色调路灯，氛围感",
-    "极简白色背景，棚拍质感，干净利落",
-    "户外公园，自然绿色背景，阳光明媚",
-    "地铁站台，都市通勤风，冷色调",
-    "海边码头，落日余晖，浪漫氛围",
+# 当 --count > 1 时，从元素池随机组合场景描述，确保每张图不同
+_SCENE_LOCATIONS = [
+    "都市街角", "咖啡店", "画廊展厅", "城市天台", "创意工作室",
+    "街边长椅", "地铁站台", "海边码头", "户外公园", "独立书店",
+    "花店门口", "唱片店内", "复古市集", "天桥过道", "露台花园",
 ]
+_SCENE_LIGHTING = [
+    "自然光", "暖色灯光", "柔和侧光", "落日余晖", "清晨阳光",
+    "霓虹灯光", "散射柔光", "窗边逆光",
+]
+_SCENE_ATMOSPHERE = [
+    "慵懒氛围", "活力氛围", "沉静氛围", "随性氛围", "酷感氛围",
+    "温暖氛围", "清新氛围", "文艺氛围",
+]
+
+
+def _random_scene() -> str:
+    loc = random.choice(_SCENE_LOCATIONS)
+    light = random.choice(_SCENE_LIGHTING)
+    atm = random.choice(_SCENE_ATMOSPHERE)
+    return f"{loc}，{light}，{atm}"
 
 
 def build_prompt(
@@ -309,7 +317,7 @@ def main():
         current_seed = args.seed if args.seed else None
         scene = None
         if args.count > 1:
-            scene = SCENE_VARIATIONS[i % len(SCENE_VARIATIONS)]
+            scene = _random_scene()
         prompt, used_seed = build_prompt(
             args.product, args.desc, current_seed, args.ratio, scene
         )
