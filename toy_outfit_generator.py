@@ -4,7 +4,7 @@
 专为潮玩博主设计的通用穿搭图生成工具
 """
 
-__version__ = "3.0.0"
+__version__ = "3.2.0"
 
 import argparse
 import base64
@@ -61,10 +61,9 @@ if "-h" in sys.argv or "--help" in sys.argv:
 
 try:
     import requests
-    from requests_toolbelt import MultipartEncoder
 except ImportError:
-    logger.error("Error: requests or requests_toolbelt library not installed.")
-    logger.error("Run: pip install requests requests_toolbelt")
+    logger.error("Error: requests library not installed.")
+    logger.error("Run: pip install requests")
     sys.exit(1)
 
 
@@ -104,78 +103,28 @@ def ensure_output_dir(output_path: str) -> None:
         logger.info(f"   Created output directory: {output_dir}")
 
 
-def generate_image_multipart(
-    prompt: str,
-    api_url: str,
-    api_key: str,
-    model: str,
-    image_files: List[str],
-    output_path: Optional[str] = None
-) -> Optional[str]:
-    if not api_url.endswith("/chat/completions"):
-        api_url = api_url.rstrip("/") + "/chat/completions"
-
-    try:
-        import json
-        messages = [
-            {
-                "role": "user",
-                "content": [
-                    {"type": "text", "text": prompt},
-                    {"type": "image_url", "image_url": {"url": "data:image/png;base64,<IMAGE_PLACEHOLDER>"}}
-                ]
-            }
-        ]
-        
-        m = MultipartEncoder(
-            fields={
-                'model': model,
-                'messages': json.dumps(messages),
-                'file': ('image.png', open(image_files[0], 'rb'), 'image/png')
-            }
-        )
-
-        headers = {
-            "Authorization": f"Bearer {api_key}",
-            "Content-Type": m.content_type
-        }
-
-        logger.info(f"   Sending multipart request to {api_url}...")
-        response = requests.post(api_url, headers=headers, data=m, timeout=180)
-        logger.info(f"   Response status: {response.status_code}")
-
-        if response.status_code == 200:
-            result = response.json()
-            if "choices" in result and len(result["choices"]) > 0:
-                message = result["choices"][0].get("message", {})
-                if isinstance(message, dict):
-                    content = message.get("content", "")
-                else:
-                    content = str(message)
-                
-                if content:
-                    image_url = extract_image_url_from_markdown(content)
-                    if image_url:
-                        logger.info(f"   Generated image URL: {image_url}")
-                        if output_path:
-                            ensure_output_dir(output_path)
-                            download_image_from_url(image_url, output_path)
-                            logger.info(f"   Image saved to: {output_path}")
-                            return output_path
-                        return image_url
-            else:
-                logger.error(f"   Unexpected response structure")
-        else:
-            logger.error(f"   API Error Response Text: {response.text}")
-            raise Exception(f"API returned {response.status_code}")
-    except Exception as e:
-        logger.error(f"   Multipart upload failed: {str(e)}")
-        raise
-
-    return None
+# 当 --count > 1 时，自动轮换使用不同的场景背景描述，确保每张图不同
+SCENE_VARIATIONS = [
+    "都市街景，时尚街头氛围，自然光线",
+    "简约咖啡店内，温暖灯光，慵懒氛围",
+    "艺术画廊展厅，现代感白墙背景",
+    "城市天台，开阔视野，蓝天背景",
+    "创意工作室，文艺氛围，柔和光线",
+    "傍晚街角，暖色调路灯，氛围感",
+    "极简白色背景，棚拍质感，干净利落",
+    "户外公园，自然绿色背景，阳光明媚",
+    "地铁站台，都市通勤风，冷色调",
+    "海边码头，落日余晖，浪漫氛围",
+]
 
 
-def build_prompt(product_name: str, product_desc: str = "", random_seed: Optional[int] = None, ratio: str = "3:4") -> Tuple[str, int]:
+def build_prompt(
+    product_name: str,
+    product_desc: str = "",
+    random_seed: Optional[int] = None,
+    ratio: str = "3:4",
+    scene_variation: Optional[str] = None
+) -> Tuple[str, int]:
     if random_seed is None:
         random_seed = int(time.time() * 1000000) % 100000000
 
@@ -205,7 +154,10 @@ def build_prompt(product_name: str, product_desc: str = "", random_seed: Optiona
         "- 光线柔和自然",
         "- 背景简洁不抢镜",
         f"- 图片比例 {ratio}",
-        "- 高质量视觉效果"
+        "- 高质量视觉效果",
+        "",
+        "场景/背景：",
+        f"- {scene_variation}" if scene_variation else "",
     ]
 
     return "\n".join(prompt_parts).strip(), random_seed
@@ -236,19 +188,6 @@ def generate_image(
 
     if valid_images:
         logger.info(f"   Mode: Image-to-Image (refs: {', '.join(valid_images)})")
-        logger.info(f"   Trying multipart upload first...")
-        try:
-            return generate_image_multipart(
-                prompt=prompt,
-                api_url=api_url,
-                api_key=api_key,
-                model=model,
-                image_files=valid_images,
-                output_path=output_path
-            )
-        except Exception as e:
-            logger.warning(f"   Multipart upload failed: {str(e)}")
-            logger.info(f"   Falling back to base64 encoding...")
     else:
         logger.info(f"   Mode: Text-to-Image")
 
@@ -368,7 +307,12 @@ def main():
 
     for i in range(args.count):
         current_seed = args.seed if args.seed else None
-        prompt, used_seed = build_prompt(args.product, args.desc, current_seed, args.ratio)
+        scene = None
+        if args.count > 1:
+            scene = SCENE_VARIATIONS[i % len(SCENE_VARIATIONS)]
+        prompt, used_seed = build_prompt(
+            args.product, args.desc, current_seed, args.ratio, scene
+        )
         
         if args.count > 1:
             base, ext = os.path.splitext(args.output)
