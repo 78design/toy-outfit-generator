@@ -1,0 +1,164 @@
+name: Release and Package
+
+on:
+  push:
+    branches:
+      - main
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: '版本号 (例如: v3.0.0)'
+        required: false
+        type: string
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Get version
+        id: version
+        run: |
+          if [ "${{ github.event.inputs.version }}" != "" ]; then
+            VERSION="${{ github.event.inputs.version }}"
+          elif [ "${{ github.ref }}" != "" ]; then
+            VERSION="${{ github.ref_name }}"
+          else
+            VERSION=$(date +'%Y.%m.%d')
+          fi
+          echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
+          echo "VERSION_NUM=${VERSION#v}" >> $GITHUB_OUTPUT
+          
+          echo "Release version: $VERSION"
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          pip install -r requirements.txt
+
+      - name: Verify script
+        run: |
+          python toy_outfit_generator.py --version
+
+      - name: Create release directory
+        run: |
+          mkdir -p release
+          
+          # 复制核心文件
+          cp toy_outfit_generator.py release/
+          cp requirements.txt release/
+          cp README.md release/
+          cp .env.example release/.env
+          
+          # 创建安装脚本
+          cat > release/install.sh << 'INSTALL_SCRIPT'
+#!/bin/bash
+set -e
+
+TOOL_NAME="toy-outfit-generator"
+INSTALL_DIR="${HOME}/.local/bin/${TOOL_NAME}"
+TEMP_DIR=$(mktemp -d)
+
+echo "正在安装 ${TOOL_NAME}..."
+
+# 清理旧版本
+if [ -d "${INSTALL_DIR}" ]; then
+    echo "清理旧版本..."
+    rm -rf "${INSTALL_DIR}"
+fi
+
+# 创建安装目录
+mkdir -p "${INSTALL_DIR}"
+
+# 复制文件
+echo "复制文件..."
+cp -r . "${INSTALL_DIR}/"
+
+# 添加执行权限
+chmod +x "${INSTALL_DIR}/toy_outfit_generator.py"
+
+# 创建符号链接
+echo "创建符号链接..."
+ln -sf "${INSTALL_DIR}/toy_outfit_generator.py" "${HOME}/.local/bin/toy"
+ln -sf "${INSTALL_DIR}/toy_outfit_generator.py" "${HOME}/.local/bin/toy-outfit"
+
+# 复制环境变量示例
+if [ ! -f "${HOME}/.local/bin/${TOOL_NAME}/.env" ]; then
+    cp "${INSTALL_DIR}/.env.example" "${INSTALL_DIR}/.env"
+    echo "请编辑 ${INSTALL_DIR}/.env 配置文件设置 API 密钥"
+fi
+
+echo ""
+echo "✅ 安装成功！"
+echo ""
+echo "使用方式："
+echo "  toy-outfit --product '毛绒挂件' --output outfit.png"
+echo ""
+echo "配置文件：${INSTALL_DIR}/.env"
+echo ""
+INSTALL_SCRIPT
+          
+          chmod +x release/install.sh
+
+      - name: Create zip package
+        run: |
+          cd release
+          zip -r "../toy-outfit-generator-${{ steps.version.outputs.VERSION_NUM }}.zip" .
+          ls -lh "../toy-outfit-generator-${{ steps.version.outputs.VERSION_NUM }}.zip"
+
+      - name: Create tar.gz package
+        run: |
+          cd release
+          tar -czf "../toy-outfit-generator-${{ steps.version.outputs.VERSION_NUM }}.tar.gz" .
+          ls -lh "../toy-outfit-generator-${{ steps.version.outputs.VERSION_NUM }}.tar.gz"
+
+      - name: Upload release artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-package-${{ steps.version.outputs.VERSION_NUM }}
+          path: |
+            toy-outfit-generator-${{ steps.version.outputs.VERSION_NUM }}.zip
+            toy-outfit-generator-${{ steps.version.outputs.VERSION_NUM }}.tar.gz
+          retention-days: 30
+
+      - name: Create GitHub Release
+        if: startsWith(github.ref, 'refs/tags/') || github.event_name == 'workflow_dispatch'
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ steps.version.outputs.VERSION }}
+          name: Release ${{ steps.version.outputs.VERSION }}
+          draft: false
+          prerelease: false
+          generate_release_notes: true
+          files: |
+            toy-outfit-generator-${{ steps.version.outputs.VERSION_NUM }}.zip
+            toy-outfit-generator-${{ steps.version.outputs.VERSION_NUM }}.tar.gz
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Display download info
+        run: |
+          echo ""
+          echo "📦 安装包已生成："
+          echo "  - toy-outfit-generator-${{ steps.version.outputs.VERSION_NUM }}.zip"
+          echo "  - toy-outfit-generator-${{ steps.version.outputs.VERSION_NUM }}.tar.gz"
+          echo ""
+          echo "🚀 使用方式："
+          echo ""
+          echo "方式一：直接下载压缩包"
+          echo "  下载上面的 zip 或 tar.gz 文件，解压后运行 install.sh"
+          echo ""
+          echo "方式二：在线一键安装"
+          echo "  curl -fsSL https://raw.githubusercontent.com/78design/toy-outfit-generator/${{ steps.version.outputs.VERSION }}/install.sh | bash"
+          echo ""
+          echo "方式三：标准技能安装"
+          echo "  npx skills add 78design/toy-outfit-generator"

@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "skills": {
+    "toy-outfit-generator": {
+      "source": "78design/toy-outfit-generator",
+      "sourceType": "github",
+      "skillPath": "SKILL.md",
+      "computedHash": "9c8afebc11622b73f589789a4f4e8753557595e6a650a83bc64fac18a496534b"
+    }
+  }
+}
