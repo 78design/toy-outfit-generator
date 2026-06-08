@@ -16,6 +16,13 @@ import time
 from pathlib import Path
 from typing import List, Optional, Tuple
 
+try:
+    import requests
+except ImportError:
+    print("Error: requests library not installed.")
+    print("Run: pip install requests")
+    sys.exit(1)
+
 # 配置日志
 logging.basicConfig(
     level=logging.INFO,
