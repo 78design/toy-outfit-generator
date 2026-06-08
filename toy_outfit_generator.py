@@ -35,15 +35,6 @@ logger = logging.getLogger(__name__)
 DEFAULT_API_URL = "https://api.1openapi.com/v1"
 DEFAULT_MODEL = "openai/gpt-image-2"
 DEFAULT_RATIO = "3:4"
-# 常见比例对应的固定尺寸（根据API实际输出调整）
-DIMENSIONS = {
-    "1:1": "1088x1088",
-    "3:4": "1086x1448",
-    "4:3": "1448x1086",
-    "9:16": "1088x1934",
-    "16:9": "1934x1088",
-}
-DEFAULT_DIMENSION = "1086x1448"
 
 
 def encode_image_to_base64(image_path: str) -> str:
@@ -94,9 +85,6 @@ def build_prompt(
     if random_seed is None:
         random_seed = int(time.time() * 1000000) % 100000000
 
-    # 获取固定尺寸
-    dimension = DIMENSIONS.get(ratio, DEFAULT_DIMENSION)
-
     prompt_parts = [
         f"（随机种子: {random_seed}）",
         "",
@@ -123,7 +111,6 @@ def build_prompt(
         "- 光线柔和自然",
         "- 背景简洁不抢镜",
         f"- 图片比例 {ratio}",
-        f"- 图片尺寸必须是 {dimension}",
         "- 高质量视觉效果",
     ]
 
